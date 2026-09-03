@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Sinai Trail</title>
+<meta name="description" content="An Oregon Trail-style game of Israel's forty-year journey from the Red Sea to Jericho, with teaching from BEMA Discipleship, David Pawson and BibleProject.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="monitor">
+  <div id="bezel">
+    <div id="topbar">
+      <span id="brand">THE SINAI TRAIL</span>
+      <span id="btns"><button id="mapbtn">MAP (M)</button><button id="sndbtn">SOUND: OFF (S)</button></span>
+    </div>
+    <canvas id="scene" width="560" height="192"></canvas>
+    <div id="title"></div>
+    <div id="text"></div>
+    <ul id="menu"></ul>
+    <div id="status"></div>
+    <div id="scanlines"></div>
+  </div>
+  <div id="map" hidden>
+    <div id="mapwrap">
+      <canvas id="mapc" width="560" height="384"></canvas>
+      <div id="mapside">
+        <h3>WHERE YOU HAVE BEEN</h3>
+        <ul id="maplog"></ul>
+        <p class="hint">Route: Sea of Reeds → Marah → Elim → Sin → Rephidim → Sinai → Taberah → Hazeroth → Kadesh → Paran/Zin → Kadesh → Mt Hor → Arabah → Jahaz → Shittim → Nebo → Jordan → Jericho</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/data/core.js"></script>
+<script src="js/data/stops_exodus.js"></script>
+<script src="js/data/stops_numbers.js"></script>
+<script src="js/data/stops_joshua.js"></script>
+<script src="js/data/events.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/map.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/engine.js"></script>
+</body>
+</html>

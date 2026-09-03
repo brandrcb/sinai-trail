@@ -1,0 +1,37 @@
+/* THE SINAI TRAIL — Apple II phosphor look */
+:root { --g: #33ff33; --dg: #1a7a1a; --k: #000; --w: #fff; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #0a0a0a; color: var(--g); font-family: 'VT323', 'Courier New', monospace; }
+#monitor { max-width: 900px; margin: 12px auto; padding: 0 8px; }
+#bezel { position: relative; background: var(--k); border: 6px solid #2a2a2a; border-radius: 14px; box-shadow: 0 0 0 3px #111, 0 0 40px rgba(51,255,51,.12) inset, 0 8px 30px rgba(0,0,0,.8); padding: 10px 14px 12px; overflow: hidden; }
+#topbar { display: flex; justify-content: space-between; align-items: center; font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dg); margin-bottom: 8px; }
+#btns button { background: var(--k); color: var(--g); border: 1px solid var(--dg); font-family: 'Press Start 2P', monospace; font-size: 8px; padding: 5px 7px; margin-left: 6px; cursor: pointer; }
+#btns button:hover { background: var(--dg); color: var(--k); }
+#scene { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid var(--dg); background: var(--k); }
+#title { font-family: 'Press Start 2P', monospace; font-size: 11px; color: var(--w); margin: 10px 0 4px; min-height: 14px; letter-spacing: 1px; }
+#text { white-space: pre-wrap; font-size: 22px; line-height: 1.15; min-height: 150px; max-height: 400px; overflow-y: auto; padding: 4px 2px; cursor: default; text-shadow: 0 0 6px rgba(51,255,51,.45); }
+#menu { list-style: none; margin: 6px 0 0; padding: 0; font-size: 22px; }
+#menu li { padding: 3px 6px; cursor: pointer; border-left: 3px solid transparent; }
+#menu li:hover { background: #062; border-left-color: var(--g); }
+#menu li.cont { color: var(--dg); animation: blink 1.4s steps(2) infinite; }
+#menu li.inp input { background: var(--k); color: var(--g); border: none; border-bottom: 2px solid var(--g); font-family: inherit; font-size: 22px; width: 260px; outline: none; }
+#menu .k { color: var(--w); }
+#status { display: flex; flex-wrap: wrap; gap: 4px 18px; border-top: 1px dashed var(--dg); margin-top: 10px; padding-top: 6px; font-size: 18px; color: var(--dg); min-height: 22px; }
+#status span { white-space: nowrap; }
+#scanlines { pointer-events: none; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+@keyframes blink { 50% { opacity: .3; } }
+/* map overlay */
+#map[hidden] { display: none; }
+#map { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 10; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+#mapwrap { display: flex; gap: 14px; max-width: 900px; width: 96%; align-items: stretch; cursor: default; }
+#mapc { width: 66%; height: auto; image-rendering: pixelated; border: 4px solid var(--dg); background: var(--k); flex: 0 0 66%; }
+#mapside { flex: 1; border: 2px solid var(--dg); padding: 10px; font-size: 18px; overflow-y: auto; max-height: 70vh; }
+#mapside h3 { font-family: 'Press Start 2P', monospace; font-size: 9px; color: var(--w); margin: 0 0 8px; }
+#mapside ul { padding-left: 18px; margin: 0; }
+#mapside .hint { color: var(--dg); font-size: 15px; }
+@media (max-width: 640px) {
+  #text, #menu, #menu li.inp input { font-size: 18px; }
+  #status { font-size: 15px; }
+  #mapwrap { flex-direction: column; }
+  #mapc { width: 100%; flex-basis: auto; }
+}
