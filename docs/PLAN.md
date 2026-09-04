@@ -1,4 +1,4 @@
-# THE SINAI TRAIL — Design Plan
+# THE EXODUS TRAIL — Design Plan
 
 *An Oregon Trail–style browser game of the 40-year journey from the far shore of the Red Sea to the fall of Jericho.*
 *Teaching sources: BEMA Discipleship (Marty Solomon), David Pawson "Unlocking the Old Testament", BibleProject.*
@@ -16,9 +16,9 @@ The player leads one Israelite household inside the great camp. They must keep f
 
 The desert is the classroom: "God had to get Egypt out of them… the desert is the refining fire" (BEMA 20).
 
-## 2. Oregon Trail → Sinai Trail mapping
+## 2. Oregon Trail → Exodus Trail mapping
 
-| Oregon Trail | Sinai Trail |
+| Oregon Trail | Exodus Trail |
 |---|---|
 | Banker / Carpenter / Farmer | **Elder of Judah** (marches first, most silver, ×1) / **Levite** (carries the holy things, ×2) / **Danite rear-guard** (poorest, guards the weak at the back, ×3) |
 | Name 4 companions | Name your household (spouse, children, an elderly parent) |
@@ -101,6 +101,10 @@ sinai-trail/
 ```
 
 ## 7. Roadmap
+
+* **v0.4 mini-games + retune (done 2026-09-04)** — fishing (3 shores), the sling (flock defence), manna gathering (daily judgement game; sixth day / Sabbath rules unspoken). Difficulty retuned so NORMAL is not punishing: water cap 18 days, wells +5, lag pace easy on the body, raiders at lag 25% lethal; GENTLE 0.7 (faster cures, weak threshold 40), HARD 1.35 (slower cures, weak threshold 55). NAMES.md lists every name in the game with its meaning.
+
+* **v0.3 balance (done 2026-09-04)** — Oregon-style hidden hardship score H with Emunah term; illness rolled from H with behaviour-based recovery and a weak-member death rule; water per person per day (cap 16 days, wells +4); rest free at water, costs water in the open; grumbles wear the body; Levi cannot push ahead and heals faster, Judah takes raids harder; sandals wear unless trust ≥ 60; Oregon scoring 500/400/300/200 × role; difficulty menu. Tuned with analysis/sim2.py: careful first-timer ≈ 41 % no deaths / 40 % lose 1–2 / 19 % lose 3+.
 
 * **v0.1 (this demo)** — full route playable end-to-end; all 18 stops with story, choices, consequences and insights; random events; map; chiptune; top ten; deaths & endings.
 * **v0.2** — deeper Sinai chapter (Ten Words as collectible cards in "wedding-speak" per BEMA 22; tabernacle build phases; Nadab & Abihu); Leviticus festival calendar; Amalek arms-up minigame; hunting-style quail screen.

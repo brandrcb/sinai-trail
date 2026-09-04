@@ -67,7 +67,7 @@
 
   /* ---- scene painters ---- */
   const S = {};
-  S.title = (f) => { sky(true); mountains(70, [[30, 40], [70, 22], [110, 50], [150, 30], [190, 12], [230, 44], [260, 34]], C.g); ground(70, f); caravan(50, 70, f, true); sun(250, 12, C.w); text("THE EXODUS TRAIL", 52, 22, C.g, 14); text("From the Sea of Reeds to Jericho", 52, 34, C.w, 7); };
+  S.title = (f) => { sky(true); mountains(70, [[30, 40], [70, 22], [110, 50], [150, 30], [190, 12], [230, 44], [260, 34]], C.g); ground(70, f); caravan(50, 70, f, true); sun(250, 12, C.w); text("THE EXODUS TRAIL", 60, 22, C.g, 14); text("From the Sea of Reeds to Jericho", 52, 34, C.w, 7); };
   S.sea = (f) => { sky(); sun(40, 12); mountains(60, [[180, 50], [220, 30], [260, 45]], C.g); ground(60, 0); water(62, 34, f); dither(0, 62, W, 34, C.k, 0.3); rect(0, 88, W, 8, C.g); caravan(100, 58, f, true); for (let i = 0; i < 12; i++) sprite(WOMAN[(f + i) % 2], 8 + i * 9 - (i % 2) * 2, 44 - (i % 3) * 2); };
   S.marah = (f) => { sky(); sun(230, 10); mountains(64, [[40, 30], [90, 40], [130, 20], [200, 46]], C.g); ground(64, 0); rect(100, 70, 60, 10, C.b); dither(100, 70, 60, 10, C.k); sprite(MAN[0], 90, 52); sprite(MAN[1], 165, 52); sprite(WOMAN[0], 175, 52); sprite(KID[0], 60, 56); sprite(BUSH, 40, 60); line(96, 58, 108, 68, C.w); };
   S.elim = (f) => { sky(); sun(40, 10); ground(66, 0); for (let i = 0; i < 9; i++) sprite(PALM, 10 + i * 30 + (i % 2) * 6, 40 - (i % 3) * 6); water(74, 8, f); water(84, 6, f); camp(150, 90, 4); sprite(WOMAN[0], 60, 62); sprite(KID[1], 72, 66); sprite(SHEEP[0], 120, 80); sprite(SHEEP[1], 132, 82); };

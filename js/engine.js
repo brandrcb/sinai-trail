@@ -1,5 +1,5 @@
 /* ============================================================
-   THE SINAI TRAIL — engine
+   THE EXODUS TRAIL — engine
    Screens, state, travel loop, events, scoring.
    ============================================================ */
 (function () {
@@ -9,13 +9,21 @@
 
   /* ---------- UI layer ---------- */
   const UI = {
-    canvas: null, ctx: null, frame: 0, anim: null,
+    canvas: null, ctx: null, frame: 0, anim: null, t0: 0, T: 0,
     pending: null,          // resolver for current page/choice
     options: [],            // current option list
     interrupt: false,
+    fast: false,            // travel fast-forward (SPACE)
+    look: "classic",        // "classic" (1985 green screen) or "deluxe" (1990-style colour)
+    travel: { progress: 0, scroll: 0 },
     init() {
       this.canvas = $("scene"); this.ctx = this.canvas.getContext("2d");
       this.ctx.imageSmoothingEnabled = false;
+      let look = "classic"; try { look = localStorage.getItem("sinai_look") || "classic"; } catch (e) { }
+      if (location.hash === "#deluxe") look = "deluxe"; if (location.hash === "#classic") look = "classic";
+      this.setLook(look, true);
+      $("lookbtn").addEventListener("click", () => this.setLook(this.look === "classic" ? "deluxe" : "classic"));
+      this.canvas.addEventListener("click", () => { if (!this.pending && !this.busy) this.fast = !this.fast; });
       document.addEventListener("keydown", e => this.key(e));
       $("menu").addEventListener("click", e => {
         const li = e.target.closest("li"); if (li) this.select(+li.dataset.i);
@@ -25,12 +33,23 @@
       $("sndbtn").addEventListener("click", () => SINAI.Audio.toggle());
       $("map").addEventListener("click", () => SINAI.Map.hide());
     },
+    setLook(mode, silent) {
+      this.look = mode === "deluxe" ? "deluxe" : "classic";
+      document.body.classList.toggle("deluxe", this.look === "deluxe");
+      this.canvas.height = this.look === "deluxe" ? SINAI.ScenesDeluxe.H * SINAI.ScenesDeluxe.P : 192;
+      $("lookbtn").textContent = this.look === "deluxe" ? "LOOK: DELUXE (L)" : "LOOK: CLASSIC (L)";
+      try { localStorage.setItem("sinai_look", this.look); } catch (e) { }
+      if (!silent) { this.frame = 0; this.paint(); }
+    },
     key(e) {
+      if (this.busy) return;
+      if (this.textInput) { if (e.key === "Escape") return; }
       if (e.key === "m" || e.key === "M") { if (Game.S) SINAI.Map.toggle(Game.S); return; }
       if (e.key === "s" || e.key === "S") { SINAI.Audio.toggle(); return; }
+      if ((e.key === "l" || e.key === "L") && !this.textInput) { this.setLook(this.look === "classic" ? "deluxe" : "classic"); return; }
       if (SINAI.Map.visible) { if (e.key === "Escape" || e.key === "Enter") SINAI.Map.hide(); return; }
       if (this.textInput) return; // typing a name
-      if (!this.pending) { if (e.key === "Enter" || e.key === " ") this.interrupt = true; return; }
+      if (!this.pending) { if (e.key === "Enter") this.interrupt = true; else if (e.key === " ") { this.fast = !this.fast; e.preventDefault(); } return; }
       if (this.options.length) {
         const n = parseInt(e.key, 10);
         if (n >= 1 && n <= this.options.length) { this.select(n - 1); e.preventDefault(); }
@@ -43,13 +62,27 @@
       const r = this.pending; this.pending = null; this.options = [];
       $("menu").innerHTML = ""; r(i);
     },
-    setScene(name, opts) { this.sceneName = name; this.sceneOpts = opts || {}; this.paint(); },
+    setScene(name, opts) { if (name !== this.sceneName) { this.t0 = performance.now(); this.T = 0; this.frame = 0; } this.sceneName = name; this.sceneOpts = opts || {}; this.paint(); },
     paint() {
       if (!this.sceneName) return;
-      SINAI.Scenes.draw(this.ctx, this.sceneName, this.frame, Game.S, this.sceneOpts);
+      if (this.look === "deluxe") SINAI.ScenesDeluxe.draw(this.ctx, this.sceneName, this.T, Game.S, this.sceneOpts, this.travel);
+      else SINAI.Scenes.draw(this.ctx, this.sceneName, this.frame, Game.S, this.sceneOpts);
     },
-    startAnim() { if (this.anim) return; this.anim = setInterval(() => { this.frame++; this.paint(); }, 160); },
-    stopAnim() { clearInterval(this.anim); this.anim = null; },
+    startAnim() {
+      if (this.anim) return;
+      let last = performance.now();
+      const step = now => {
+        if (!this.anim) return;
+        const dt = Math.min(0.1, (now - last) / 1000); last = now;
+        this.T = Math.max(0, (now - this.t0) / 1000);
+        if (this.sceneName === "travel") this.travel.scroll += dt * (this.fast ? 90 : 26) * (Game.S && Game.S.pace === "ahead" ? 1.3 : Game.S && Game.S.pace === "lag" ? 0.7 : 1);
+        if (this.look === "deluxe") this.paint();
+        else { const f = Math.floor(this.T / (this.fast && this.sceneName === "travel" ? 0.06 : 0.16)); if (f !== this.frame) { this.frame = f; this.paint(); } }
+        this.anim = requestAnimationFrame(step);
+      };
+      this.anim = requestAnimationFrame(step);
+    },
+    stopAnim() { if (this.anim) cancelAnimationFrame(this.anim); this.anim = null; },
     title(t) { $("title").textContent = t || ""; },
     text(t) { $("text").textContent = t || ""; $("text").scrollTop = 0; },
     page(text, opts) {
@@ -82,13 +115,11 @@
     status(S) {
       const st = $("status");
       if (!S) { st.innerHTML = ""; return; }
-      const alive = S.party.filter(p => p.alive);
-      const avg = alive.length ? alive.reduce((a, p) => a + p.hp, 0) / alive.length : 0;
-      const h = avg > 75 ? "good" : avg > 50 ? "fair" : avg > 25 ? "poor" : "very poor";
+      const h = Game.band(S.H) + (S.party.some(p => p.alive && p.ill) ? " (illness)" : "");
       st.innerHTML =
         `<span>Date: ${Game.dateStr()}</span><span>Weather: ${S.weather}</span><span>Health: ${h}</span>` +
         `<span>Pace: ${S.pace === "cloud" ? "with the cloud" : S.pace === "ahead" ? "ahead of the cloud" : "lagging"}</span><span>Manna: ${S.manna ? SINAI.RATIONS[S.rations].name.split(",")[0].toLowerCase() : (S.visited.includes("jordan") ? "ended" : "none yet")}</span>` +
-        `<span>Water: ${Math.max(0, Math.round(S.water))} days</span><span>Food: ${Math.max(0, Math.round(S.food))} lbs</span>` +
+        `<span>Water: ${Math.max(0, Math.floor(Game.waterDays()))} days</span><span>Food: ${Math.max(0, Math.round(S.food))} lbs</span>` +
         `<span>Emunah: ${Math.round(S.trust)}</span><span>Grumbles: ${S.grumbles}/10</span>`;
     }
   };
@@ -96,6 +127,15 @@
   /* ---------- Game ---------- */
   const Game = {
     S: null,
+    difficulty() { let d = 1; try { d = parseFloat(localStorage.getItem("sinai_diff") || "1") || 1; } catch (e) { } return d; },
+    setDifficulty(d) { try { localStorage.setItem("sinai_diff", String(d)); } catch (e) { } if (this.S) this.S.diff = d; },
+    diffName(d) { return d < 1 ? "FOLLOW THE CLOUD (gentle)" : d > 1 ? "TEN TIMES (hard)" : "TEST THE LORD (normal)"; },
+    /* hidden hardship score H (0-139), Oregon-style: good / fair / poor / very poor */
+    band(H) { return H < 35 ? "good" : H < 70 ? "fair" : H < 105 ? "poor" : "very poor"; },
+    count() { return this.S.party.filter(p => p.alive).length; },
+    waterCap() { return 18 * Math.max(1, this.count()); },   // 18 days of skins for the household
+    waterDays() { return this.S.water / Math.max(1, this.count()); },
+    atWater() { const S = this.S; return S.miles <= 0 && ["spring", "well", "bought"].includes(SINAI.STOPS[S.stopIdx].water); },
     dateStr() {
       const S = this.S; return `${S.d} ${SINAI.MONTHS[S.m - 1]}, year ${S.y}`;
     },
@@ -106,6 +146,7 @@
         party: names.map((n, i) => ({ name: n, hp: 100, alive: true, ill: null, cause: null, age: [35, 31, 63, 12, 8][i] })),
         water: 0, food: 0, flock: 0, donkeys: 0, skins: 0, sandals: 0, sandalsBought: 0,
         manna: false, trust: 55, grumbles: 0, flags: {},
+        H: 10, FS: 0, diff: Game.difficulty(), sandalMiles: 0, illToday: null, egyptFish: 0,
         y: 1, m: 1, d: 21, day: 0, dow: 0,
         stopIdx: 0, miles: 0, traveled: 0, pace: "cloud", rations: "omer", paceMod: 1,
         weather: "clear", log: [], visited: [], deaths: [], generation: 1
@@ -119,10 +160,11 @@
         S, rand: rnd, pick: a => a[Math.floor(rnd() * a.length)],
         page: (t, o) => UI.page(t, Object.assign({ scene: o && o.scene || G.curScene }, o || {})),
         choose: (p, o, x) => UI.choose(p, o, Object.assign({ scene: x && x.scene || G.curScene }, x || {})),
-        insight: (src, t) => UI.page(t, { title: "SCROLL OF INSIGHT  —  " + src, scene: "scroll" }),
+        insight: (src, t) => UI.page(t, { title: "SCROLL OF INSIGHT", scene: "scroll" }),
+        minigame: (name, opts) => G.minigame(name, opts),
         trust: n => { S.trust = Math.max(0, Math.min(100, S.trust + n)); UI.status(S); },
-        grumble: why => { S.grumbles++; S.trust = Math.max(0, S.trust - 3); S.log.push("Grumbled at " + why); if (S.grumbles >= 10 && S.visited.includes("kadesh")) { S.party.forEach(p => { if (p.alive) p.hp = Math.max(1, p.hp - 20); }); S.trust = Math.max(0, S.trust - 5); } UI.status(S); return S.grumbles; },
-        water: n => { S.water = Math.max(0, Math.min(40, S.water + n)); UI.status(S); },
+        grumble: why => { S.grumbles++; S.trust = Math.max(0, S.trust - 3); S.H = Math.min(139, S.H + 5); S.log.push("Grumbled at " + why); if (S.grumbles >= 10 && S.visited.includes("kadesh") && !S.flags.sentence) { S.flags.sentence = true; S.trust = Math.max(0, S.trust - 5); } UI.status(S); return S.grumbles; },
+        water: n => { S.water = Math.max(0, Math.min(G.waterCap(), S.water + n * Math.max(1, G.count()))); UI.status(S); },
         food: n => { S.food = Math.max(0, S.food + n); UI.status(S); },
         flock: n => { S.flock = Math.max(0, S.flock + n); },
         silver: n => { S.silver = Math.max(0, S.silver + n); },
@@ -131,7 +173,7 @@
         alive: () => S.party.filter(p => p.alive),
         count: () => S.party.filter(p => p.alive).length,
         weakest: () => { const a = S.party.filter(p => p.alive).sort((x, y) => x.hp - y.hp); return a.length ? a[0].name : "someone"; },
-        sick: ill => { const a = S.party.filter(p => p.alive && !p.ill); if (!a.length) return g.weakest(); const p = g.pick(a); p.ill = ill; p.hp = Math.max(1, p.hp - 25); UI.status(S); return p.name; },
+        sick: ill => { const a = S.party.filter(p => p.alive && !p.ill); if (!a.length) return g.weakest(); const p = g.pick(a); G.fallIll(p, ill, true); UI.status(S); return p.name; },
         cure: name => { const p = S.party.find(p => p.name === name); if (p) { p.ill = null; p.hp = Math.min(100, p.hp + 20); } },
         kill: (cause, name) => {
           const a = S.party.filter(p => p.alive && (p !== S.party[0] || name));
@@ -149,12 +191,54 @@
       return g;
     },
 
+    /* ---------- mini-games ---------- */
+    async minigame(name, opts) {
+      opts = opts || {};
+      UI.stopAnim(); UI.busy = true; UI.pending = null; UI.options = []; $("menu").innerHTML = "";
+      if (opts.title !== undefined) UI.title(opts.title);
+      UI.text(opts.text || "");
+      let r = null;
+      try { r = await SINAI.Minigames[name](Object.assign({ canvas: UI.canvas, look: UI.look }, opts)); }
+      catch (e) { console.error(e); r = { caught: 0, food: 0, hits: 0, lost: 0, omers: 0, empty: !!opts.empty }; }
+      UI.busy = false;
+      return r;
+    },
+    /* The manna morning. Nobody tells you how much. One omer a head; double on the sixth day; nothing on the Sabbath. */
+    async mannaMorning(sixth) {
+      const S = this.S, n = this.count();
+      const r = await this.minigame("manna", { sixth, title: "", text: sixth ? "Dawn on the sixth day. Tomorrow is the Sabbath.\n\nThe ground is white. Move the basket over the flakes; press ENTER (or DONE) when you have gathered what your household needs." : "Dawn. 'When the dew was gone, thin flakes like frost on the ground appeared on the desert floor' (Ex 16:14).\n\nMove the basket over the flakes; press ENTER (or DONE) when you have gathered what your household needs." });
+      const need = n * (sixth ? 2 : 1), got = r.omers;
+      UI.setScene("travel"); UI.title("");
+      if (got < need - 0.3) {
+        const short = need - got; S.H = Math.min(139, S.H + 2 + short); this.hurtAll(2); const w = S.party.filter(p => p.alive).sort((a, b) => a.hp - b.hp)[0]; if (w) w.hp = Math.max(1, w.hp - 3);
+        S.flags.manna_short = (S.flags.manna_short || 0) + 1;
+        await UI.page(`${got.toFixed(2)} omers for ${n} people${sixth ? ", and tomorrow is the Sabbath" : ""}.\n\nNot enough. ${w ? w.name + " eats least and says nothing." : "Everyone eats less."}${sixth ? " Tomorrow there will be nothing on the ground, and the jar is thin." : ""}`, { title: "" });
+        if (sixth) S.flags.sabbath_hungry = true;
+      } else if (got > need + 0.5) {
+        S.trust = Math.max(0, S.trust - 3); S.H = Math.min(139, S.H + 3); S.flags.hoarded = true; S.flags.manna_extra = (S.flags.manna_extra || 0) + 1;
+        S.pendingMaggots = sixth ? null : true;
+        if (sixth) await UI.page(`${got.toFixed(2)} omers — more than two a head. The extra bakes into hard cakes that nobody wants, and a neighbour's family has less. EMUNAH slips.`, { title: "" });
+        else await UI.page(`${got.toFixed(2)} omers for ${n} people. More than an omer a head. You put the extra in a jar, just in case.`, { title: "" });
+      } else {
+        S.trust = Math.min(100, S.trust + 1); S.flags.manna_exact = (S.flags.manna_exact || 0) + 1;
+        if (sixth) await UI.page(`${got.toFixed(2)} omers — two a head. Enough for today and for the Sabbath. The extra does not rot.\n\n'Each one gathered as much as they needed' (Ex 16:18).`, { title: "" });
+        else if (S.flags.manna_exact <= 2) await UI.page(`${got.toFixed(2)} omers for ${n} people. Enough. Exactly enough.`, { title: "" });
+      }
+      UI.status(S); UI.startAnim();
+    },
     whereStr() {
       const s = SINAI.STOPS[this.S.stopIdx];
       return this.S.miles > 0 && this.S.stopIdx > 0 ? "on the road to " + s.name : s.name;
     },
 
-    /* advance one calendar day (no travel) */
+    /* Someone falls ill. Onset costs 20 HP; a member already weak (HP < 50) does not survive the onset. */
+    fallIll(p, ill, scripted) {
+      const S = this.S;
+      if (p.hp < 50 + (S.diff > 1 ? 5 : S.diff < 1 ? -10 : 0) && !scripted) { p.alive = false; p.hp = 0; p.cause = ill; S.deaths.push({ name: p.name, cause: ill, where: this.whereStr() }); S.H = Math.min(139, S.H + 20); S.pendingDeath = p; return; }
+      p.ill = ill; p.hp = Math.max(1, p.hp - 20); p.strikes = (p.strikes || 0) + 1;
+    },
+
+    /* advance one calendar day.  travelling=true: on the road.  false: camped (rest, Sabbath, event days). */
     tick(travelling) {
       const S = this.S;
       S.day++; S.dow = (S.dow + 1) % 7;
@@ -162,33 +246,68 @@
       // weather
       const r = rnd();
       S.weather = r < 0.45 ? "clear" : r < 0.65 ? "scorching" : r < 0.78 ? "hot" : r < 0.86 ? "wind" : r < 0.93 ? "cool" : r < 0.98 ? "rain" : "storm";
-      // consumption
-      const n = S.party.filter(p => p.alive).length;
-      if (!S.manna) { S.food -= n * 1.5; if (S.food < 0) { S.food = 0; this.hurtAll(4); } }
-      else if (S.rations === "half") this.hurtAll(2);
-      const atStop = S.miles <= 0 && SINAI.STOPS[S.stopIdx].water !== "none";
-      if (atStop) { if (SINAI.STOPS[S.stopIdx].water === "spring") S.water = Math.min(40, S.water + 5); }
-      else { S.water -= 1; if (S.water < 0) { S.water = 0; this.hurtAll(7); S.party.forEach(p => { if (p.alive && !p.ill && rnd() < 0.15) p.ill = "thirst"; }); } }
-      if (S.weather === "scorching" && travelling) this.hurtAll(2);
-      // illness
+      const n = this.count(), atWater = this.atWater();
+      // ---- daily misery (the Oregon Trail health model: H = 0.9H + misery) ----
+      // the desert itself is hardship: 6 a day on the march (Oregon's constant was 5); in camp only the weather counts, halved
+      const wm = { clear: 0, cool: 0, hot: 1, scorching: 3, wind: 2, rain: 1, storm: 2 };
+      let m = travelling ? 6 + (wm[S.weather] || 0) : 0.5 * (wm[S.weather] || 0);
+      if (travelling) m += S.pace === "ahead" ? 4 : -1;   // the cloud is a covering (Ps 105:39); lagging is easy on the body, hard on the water
+      if (S.donkeys < 2 && travelling) m += 1;
+      // food / manna
+      let starving = false;
+      if (!S.manna) { S.food -= n * 1.5; if (S.food <= 0) { S.food = 0; starving = true; m += 8; this.hurtAll(3); } }
+      else m += S.rations === "half" ? 2 : S.rations === "double" ? 1 : 0;
+      // water: one skin per person per day unless camped at water
+      if (atWater) { S.water = this.waterCap(); }
+      else {
+        S.water -= n;
+        if (S.water <= 0) { S.water = 0; starving = true; m += 8; this.hurtAll(4); S.party.forEach(p => { if (p.alive && !p.ill && rnd() < 0.10) this.fallIll(p, "thirst"); }); }
+      }
+      // starvation compounds, Oregon-style
+      S.FS = starving ? S.FS + 0.8 : S.FS * 0.5; m += S.FS;
+      // trust: emunah is a survival stat
+      if (S.trust < 60) m += (60 - S.trust) / 10; else if (S.trust > 80) m -= 1;
+      // sandals
+      if (S.sandals <= 0 && S.stopIdx < 15 && travelling) m += 1;
+      // the sentence: "you have tested me ten times"
+      if (S.flags.sentence) m += 2;
+      // camp days: H decays by a tenth a day anyway; beside water a little faster
+      if (!travelling && atWater) m -= 3;
+      S.H = Math.max(0, Math.min(139, 0.9 * S.H + (m > 0 ? m * S.diff : m)));
+      // ---- individuals ----
+      const ill = S.party.filter(p => p.alive && p.ill).length;
       S.party.forEach(p => {
         if (!p.alive) return;
-        if (p.ill) { p.hp -= (p.ill === "snakebite" ? 12 : p.ill === "thirst" ? 6 : 4); if (rnd() < (travelling ? 0.06 : 0.14) && p.ill !== "snakebite") p.ill = null; }
-        else if (!travelling) p.hp = Math.min(100, p.hp + 3);
-        else if (S.pace === "cloud") p.hp = Math.min(100, p.hp + 0.5);
+        if (p.ill) {
+          p.hp -= (p.ill === "snakebite" ? 8 : p.ill === "thirst" ? 5 : 4) + (S.H >= 70 ? 1 : 0);
+          let cure = (travelling ? 0.03 : 0.15) + (S.diff < 1 ? 0.05 : S.diff > 1 ? -0.02 : 0); if (S.trust > 70) cure += 0.10; if (S.pace === "ahead" && travelling) cure = 0; if (!travelling && atWater) cure += 0.05; if (S.role === "levi") cure += 0.04;
+          if (p.ill !== "snakebite" && rnd() < cure) { p.ill = null; }
+        }
+        else if (!travelling) p.hp = Math.min(100, p.hp + (atWater ? 4 : 2));
+        else if (S.H < 70) p.hp = Math.min(100, p.hp + 0.5);
+        if (S.H >= 105) p.hp -= 2; else if (S.H >= 70) p.hp -= 0.5;   // poor / very poor: everyone wastes away
         p.hp = Math.max(0, p.hp);
       });
+      // ---- illness roll from H: P = 0.15 * (H/140)^2 per day, one per day at most ----
+      const pIll = 0.2 * Math.pow(S.H / 140, 2) * S.diff;
+      if (rnd() < pIll) { const a = S.party.filter(p => p.alive && !p.ill); if (a.length) { const p = a[Math.floor(rnd() * a.length)]; const kind = S.weather === "scorching" ? "heat-stroke" : rnd() < 0.5 ? "the fever" : "dysentery"; this.fallIll(p, kind); S.illToday = p.alive ? p.name + " has " + kind + "." : null; } }
     },
     hurtAll(n) { this.S.party.forEach(p => { if (p.alive) p.hp = Math.max(0, Math.min(100, p.hp - n)); }); },
 
     async checkDeaths() {
       const S = this.S;
+      if (S.illToday) { const t = S.illToday; S.illToday = null; UI.stopAnim(); await UI.page(`${t}\n\nHealth of the household: ${this.band(S.H).toUpperCase()}.\n\n${S.H >= 70 ? "The household is worn down. Rest at water, keep to the cloud, and trust — or this will not be the last." : "Rest helps. Rest beside water helps most."}`, { title: "ILLNESS" }); UI.startAnim(); }
       for (const p of S.party) {
         if (p.alive && p.hp <= 0) {
           p.alive = false; p.cause = p.ill || (S.water <= 0 ? "thirst" : S.food <= 0 && !S.manna ? "hunger" : "the wilderness");
           if (p.cause === "hunger") p.cause = "the wilderness";
           S.deaths.push({ name: p.name, cause: p.cause, where: this.whereStr() });
+          S.H = Math.min(139, S.H + 20); S.pendingDeath = p;
+        }
+        if (S.pendingDeath === p) {
+          S.pendingDeath = null; UI.stopAnim();
           await UI.page(`${p.name} HAS DIED of ${p.cause}.\n\nYou bury ${p.name} in the wilderness and pile stones on the grave. The cloud is moving. There is no time.`, { scene: "grave", title: "" });
+          if (S.flags.sentence) S.flags.sentence = false;
           if (p === S.party[0]) return true;
         }
       }
@@ -224,8 +343,8 @@
       S.party = survivors.concat(fresh);
       S.party.forEach(p => { p.hp = 100; p.ill = null; });
       S.generation = 2;
-      await UI.page("A new household stands where yours stood:\n\n" + S.party.map(p => `  ${p.name}, ${p.age}${p.age > 60 ? " (of the first generation)" : ""}`).join("\n") + "\n\n'God has no grandchildren.' (Pawson) This generation must enter the covenant itself.\n\nThe flock has multiplied. The silver is what it was. The manna still comes.", { scene: "camp" });
-      S.flock += 20; S.water = 20; S.grumbles = 0; S.trust = Math.max(S.trust, 55);
+      await UI.page("A new household stands where yours stood:\n\n" + S.party.map(p => `  ${p.name}, ${p.age}${p.age > 60 ? " (of the first generation)" : ""}`).join("\n") + "\n\n'God has no grandchildren.' This generation must enter the covenant itself.\n\nThe flock has multiplied. The silver is what it was. The manna still comes.", { scene: "camp" });
+      S.flock += 20; S.water = this.waterCap(); S.grumbles = 0; S.trust = Math.max(S.trust, 55); S.H = 10; S.FS = 0; S.flags.sentence = false;
       UI.status(S);
     },
 
@@ -234,14 +353,19 @@
       this.S = null; UI.status(null); UI.title(""); UI.setScene("title");
       UI.startAnim();
       while (true) {
-        const c = await UI.choose("THE SINAI TRAIL\n\nYou may:", [
-          "Travel the trail", "Learn about the trail", "See the Stones of Witness (top ten)", "Turn sound " + (SINAI.Audio.on ? "off" : "on"), "About this game"
+        const c = await UI.choose("THE EXODUS TRAIL\n\nYou may:", [
+          "Travel the trail", "Learn about the trail", "See the Stones of Witness (top ten)",
+          "Graphics: " + (UI.look === "deluxe" ? "DELUXE (1990 colour)  →  switch to Classic" : "CLASSIC (1985 green screen)  →  switch to Deluxe"),
+          "Difficulty: " + this.diffName(this.difficulty()),
+          "Turn sound " + (SINAI.Audio.on ? "off" : "on"), "About this game"
         ], { title: "" });
         if (c === 0) return;
         if (c === 1) for (const [t, b] of SINAI.LEARN) await UI.page(b, { title: t, scene: "scroll" });
         if (c === 2) await this.topTen();
-        if (c === 3) SINAI.Audio.toggle();
-        if (c === 4) await UI.page("THE SINAI TRAIL — a free, browser-playable Oregon Trail in the style of the 1985 Apple II original, retelling Exodus 15 to Joshua 6.\n\nTeaching drawn from BEMA Discipleship (Marty Solomon, Brent Billings, Reed Dent, Elle Grover Fricks), David Pawson's 'Unlocking the Old Testament', and BibleProject (Tim Mackie, Jon Collins). Scripture quotations are paraphrased from the NIV/ESV.\n\nMusic: original chiptune (or your own royalty-free track — see js/audio.js). No images; every scene is drawn in code.\n\nKeys: number keys choose, ENTER continues, M = map, S = sound.", { title: "ABOUT", scene: "scroll" });
+        if (c === 3) UI.setLook(UI.look === "deluxe" ? "classic" : "deluxe");
+        if (c === 4) { const d = await UI.choose("How hard should the desert be?", ["FOLLOW THE CLOUD — gentle. Less hardship, quicker recovery. Score x0.75", "TEST THE LORD — normal. The desert of the text: a careful household usually arrives; a careless one buries someone.", "TEN TIMES — hard. More hardship, slower recovery, the weak die sooner. Score x1.5"], { title: "DIFFICULTY" }); this.setDifficulty([0.7, 1, 1.35][d]); }
+        if (c === 5) SINAI.Audio.toggle();
+        if (c === 6) await UI.page("THE EXODUS TRAIL — a free, browser-playable Oregon Trail retelling Exodus 15 to Joshua 6.\n\nTwo looks, switchable any time with L: CLASSIC, in the style of the 1985 Apple II original, and DELUXE, in the style of the 1990 colour edition — parallax desert, a day/night cycle, weather, and your own household walking behind the pillar of cloud.\n\nScripture quotations are paraphrased from the NIV/ESV.\n\nMusic: original chiptune (or your own royalty-free track — see js/audio.js). No images; every scene is drawn in code.\n\nKeys: number keys choose, ENTER continues, SPACE hurries the travel days, M = map, S = sound, L = look.", { title: "ABOUT", scene: "scroll" });
       }
     },
 
@@ -276,7 +400,8 @@
         UI.status(S);
       }
       S.silver = Math.round(S.silver);
-      await UI.page(`Loaded on ${S.donkeys} donkey(s): ${Math.round(S.water)} days of water, ${S.food} lbs of provisions, ${S.skins} spare skins, ${S.sandals} pairs of sandals. Flock: ${S.flock} head. Silver: ${S.silver} shekels. Gold: ${S.gold}.\n\n${S.donkeys < 2 ? "One donkey. Your family will carry the rest on their backs. Pace suffers.\n\n" : ""}The cloud is lifting.`, { title: "" });
+      S.water = Math.min(this.waterCap(), S.water * this.count());
+      await UI.page(`Loaded on ${S.donkeys} donkey(s): ${Math.round(this.waterDays())} days of water for the household, ${S.food} lbs of provisions, ${S.skins} spare skins, ${S.sandals} pairs of sandals. Flock: ${S.flock} head. Silver: ${S.silver} shekels. Gold: ${S.gold}.\n\n${S.donkeys < 2 ? "One donkey. Your family will carry the rest on their backs. Pace suffers.\n\n" : ""}The cloud is lifting.`, { title: "" });
       if (S.donkeys < 2) S.paceMod = 0.75;
     },
 
@@ -290,7 +415,7 @@
         if (S.miles <= 0) { await this.arrive(); if (this.over) return; continue; }
         // travelling
         this.curScene = "travel";
-        UI.setScene("travel"); UI.title(""); UI.startAnim();
+        UI.setScene("travel"); UI.title(""); UI.startAnim(); UI.fast = false;
         let paused = false;
         while (S.miles > 0 && !paused) {
           if (S.dow === 6 && S.manna) { // Sabbath
@@ -298,29 +423,69 @@
           }
           $("menu").innerHTML = "";
           UI.interrupt = false;
+          if (S.manna) {
+            if (S.pendingMaggots) { S.pendingMaggots = null; UI.stopAnim(); await UI.page("Morning. The jar from yesterday is full of maggots and the tent stinks. 'Moses was angry with them' (Ex 16:20).\n\nEMUNAH leaks. You gather again.", { title: "", scene: "camp" }); UI.setScene("travel"); UI.startAnim(); }
+            if (S.dow === 5 || !S.flags.manna_first || (rnd() < 0.15 && !UI.fast)) { S.flags.manna_first = true; UI.fast = false; await this.mannaMorning(S.dow === 5); }
+            else if (S.dow === 5) { /* unreachable */ }
+          }
           const rate = SINAI.PACES[S.pace].miles * S.paceMod * (S.weather === "wind" ? 0.5 : S.weather === "scorching" ? 0.85 : 1);
           this.tick(true);
           S.miles -= rate; S.traveled += rate;
-          UI.text(`${this.dateStr()}\n\n${next.name}: ${Math.max(0, Math.round(S.miles))} miles.\nTraveled: ${Math.round(S.traveled)} miles.\n\n(Press ENTER to size up the situation. M for map.)`);
-          this.hurtAll(-SINAI.PACES[S.pace].hp); // negative hp value = damage
           if (S.rations === "double" && S.manna && rnd() < 0.3) { S.trust = Math.max(0, S.trust - 1); }
+          // sandals: the rock eats leather — unless you walk in trust (Deut 29:5, revealed at Moab)
+          S.sandalMiles += rate; if (S.sandalMiles >= 120) { S.sandalMiles = 0; if (S.trust < 60 && S.sandals > 0) S.sandals--; }
           UI.status(S);
-          for (let i = 0; i < 6 && !UI.interrupt; i++) await sleep(150);
+          // one travel day = a slow sunrise-to-sunset pass (5 s), or a quick one when fast-forwarding
+          const flavour = this.flavour(S, next);
+          const start = performance.now(); let el = 0;
+          while (true) {
+            const dayMs = UI.fast ? 600 : SINAI.DAY_MS;
+            el = performance.now() - start; UI.travel.progress = Math.min(1, el / dayMs);
+            UI.text(`${this.dateStr()}${UI.travel.progress > 0.86 ? "  —  night" : UI.travel.progress < 0.1 ? "  —  dawn" : UI.travel.progress > 0.72 ? "  —  evening" : ""}\n\n${next.name}: ${Math.max(0, Math.round(S.miles))} miles.\nTraveled: ${Math.round(S.traveled)} miles.   Weather: ${S.weather}.\n\n${flavour}\n\n(ENTER: size up the situation.  SPACE: ${UI.fast ? "slow down" : "hurry the days along"}.  M: map.)`);
+            if (el >= dayMs || UI.interrupt) break;
+            await sleep(50);
+          }
           if (await this.checkDeaths()) { await this.gameOver(); return; }
           if (UI.interrupt) { UI.interrupt = false; paused = true; break; }
-          if (rnd() < 0.2 && S.miles > 0) { await this.randomEvent(); if (await this.checkDeaths()) { await this.gameOver(); return; } UI.setScene("travel"); UI.title(""); }
+          if (rnd() < 0.2 && S.miles > 0) { UI.fast = false; await this.randomEvent(); if (await this.checkDeaths()) { await this.gameOver(); return; } UI.setScene("travel"); UI.title(""); }
         }
+        UI.fast = false;
         if (paused) { UI.stopAnim(); await this.situation(); }
       }
+    },
+
+    /* a line of colour for each travel day */
+    flavour(S, next) {
+      const alive = S.party.filter(p => p.alive), kid = alive.find(p => p.age < 18), old = alive.find(p => p.age >= 55);
+      const w = S.weather, L = [];
+      if (w === "scorching") L.push("The rocks radiate heat like the mouth of an oven. Nobody speaks.", "Heat shimmers off the wadi floor. The donkeys' ears droop.");
+      if (w === "hot") L.push("Hot. The water-skins are checked, and checked again.");
+      if (w === "wind") L.push("Sand in your teeth, your ears, your bread. You walk with your head down.", "The wind hides the front of the column. You follow the sound of the flocks.");
+      if (w === "cool") L.push("A cool day. The children run ahead and are called back.", "Cool and clear. You can see the cloud from miles behind.");
+      if (w === "rain" || w === "storm") L.push("Rain in the desert. The elders look uneasily at the wadi walls.", "Thunder over the mountains. Everyone camps high tonight.");
+      if (w === "clear") L.push("Clear. The pillar of cloud moves steadily ahead of the tribes.", "A hawk circles. The flocks graze on nothing you can see.", "You pass a broom bush with shade for exactly one person.");
+      if (kid) L.push(`${kid.name} counts the sheep again. Still ${S.flock}.`, `${kid.name} asks how much farther. ${Math.max(0, Math.round(S.miles))} miles.`);
+      if (old) L.push(`${old.name} walks slowly, leaning on the staff, and will not be carried.`);
+      if (S.manna && S.egyptFish) L.push("Someone mentions the fish. The fish you caught yourselves. Nobody answers.", "The children ask if there are fish where you are going.");
+      if (S.manna) L.push("At dawn the ground was white with manna. It is gone by the time the sun is high.", "You gathered your omer at first light. It tasted of honey wafers.");
+      else L.push("Provisions from Egypt, eaten cold. The bread is nearly gone.");
+      if (S.pace === "ahead") L.push("You push ahead of the cloud. The stragglers are far behind you now.");
+      if (S.pace === "lag") L.push("You lag at the rear with the weak. The desert behind you is empty — or seems to be.");
+      if (S.water < 4) L.push("The water-skins are nearly flat. You measure every mouthful.");
+      L.push(`Somewhere ahead: ${next.name}.`, "Two million people walk in tribal order, banner behind banner, dust to the horizon.");
+      const line = L[Math.floor(rnd() * L.length)];
+      if (line.indexOf("fish") >= 0) S.H = Math.min(139, S.H + 1);
+      return line;
     },
 
     async sabbath() {
       const S = this.S;
       UI.stopAnim();
-      const c = await UI.choose(`${this.dateStr()} — the seventh day. SABBATH.\n\nThe camp does not move. Yesterday's double portion is in the jar.\n\nYou may:`, ["Rest, as commanded", "Go out and gather anyway — 'just in case'"], { scene: "camp", title: "SABBATH" });
+      const hungry = S.flags.sabbath_hungry; S.flags.sabbath_hungry = false;
+      const c = await UI.choose(`${this.dateStr()} — the seventh day. SABBATH.\n\nThe camp does not move. ${hungry ? "The jar is nearly empty; yesterday you gathered too little." : "Yesterday's double portion is in the jar."}\n\nYou may:`, ["Rest, as commanded", "Go out and gather anyway — 'just in case'"], { scene: "camp", title: "SABBATH" });
       this.tick(false);
-      if (c === 0) { S.party.forEach(p => { if (p.alive) p.hp = Math.min(100, p.hp + 4); }); S.trust = Math.min(100, S.trust + 1); }
-      else { S.trust = Math.max(0, S.trust - 4); S.flags.sabbath_broken = true; await UI.page("Nothing. 'How long will you refuse to keep My commands?' (Ex 16:28)"); }
+      if (c === 0) { if (hungry) { this.hurtAll(3); S.H = Math.min(139, S.H + 3); await UI.page("A hungry Sabbath. Nobody goes out. The children are quiet.", { scene: "camp" }); } else { S.party.forEach(p => { if (p.alive) p.hp = Math.min(100, p.hp + 4); }); S.trust = Math.min(100, S.trust + 1); } }
+      else { await this.minigame("manna", { empty: true, title: "", text: "Dawn on the seventh day. You go out to the field." }); S.trust = Math.max(0, S.trust - 4); S.flags.sabbath_broken = true; if (hungry) { this.hurtAll(3); S.H = Math.min(139, S.H + 3); } await UI.page("Nothing. Only dew. 'How long will you refuse to keep My commands?' (Ex 16:28)", { scene: "camp" }); }
       UI.status(S); UI.setScene("travel"); UI.title(""); UI.startAnim();
       if (await this.checkDeaths()) { await this.gameOver(); }
     },
@@ -332,11 +497,11 @@
           "Continue on the trail", "Check supplies", "Look at the map", "Change pace", "Change manna-gathering", "Stop to rest", "See your household", "Read the trail log"
         ], { scene: "travel", title: "" });
         if (c === 0) return;
-        if (c === 1) await UI.page(`Water: ${Math.round(S.water)} days\nProvisions: ${Math.round(S.food)} lbs${S.manna ? " (manna falls daily)" : ""}\nFlock: ${S.flock} head\nDonkeys: ${S.donkeys}\nSpare skins: ${S.skins}\nSandals: ${S.sandals} pairs\nSilver: ${S.silver} shekels\nEgyptian gold: ${S.gold} shekels' weight\nEmunah (trust): ${Math.round(S.trust)}\nGrumbles counted: ${S.grumbles} of 10`, { title: "SUPPLIES" });
+        if (c === 1) await UI.page(`Health of the household: ${this.band(S.H)}\nWater: ${Math.floor(this.waterDays())} days for ${this.count()} people\nProvisions: ${Math.round(S.food)} lbs${S.manna ? " (manna falls daily)" : ""}\nFlock: ${S.flock} head\nDonkeys: ${S.donkeys}\nSpare skins: ${S.skins}\nSandals: ${S.sandals} pairs\nSilver: ${S.silver} shekels\nEgyptian gold: ${S.gold} shekels' weight\nEmunah (trust): ${Math.round(S.trust)}\nGrumbles counted: ${S.grumbles} of 10`, { title: "SUPPLIES" });
         if (c === 2) { SINAI.Map.show(S); await new Promise(r => { const t = setInterval(() => { if (!SINAI.Map.visible) { clearInterval(t); r(); } }, 100); }); }
-        if (c === 3) { const p = await UI.choose("The pace:", Object.values(SINAI.PACES).map(p => p.name + " — " + p.desc)); S.pace = Object.keys(SINAI.PACES)[p]; }
+        if (c === 3) { const keys = Object.keys(SINAI.PACES).filter(k => !(S.role === "levi" && k === "ahead")); const p = await UI.choose(S.role === "levi" ? "The pace (a Levite carrying the holy things cannot run ahead of the cloud):" : "The pace:", keys.map(k => SINAI.PACES[k].name + " — " + SINAI.PACES[k].desc)); S.pace = keys[p]; }
         if (c === 4) { if (!S.manna) await UI.page("There is no manna yet. You eat what you carry."); else { const r = await UI.choose("Gathering manna:", Object.values(SINAI.RATIONS).map(r => r.name + " — " + r.desc)); S.rations = Object.keys(SINAI.RATIONS)[r]; if (S.rations === "double") { S.flags.hoarded = true; await UI.page("In the morning the extra is full of maggots. Every morning. EMUNAH will leak away while you hoard."); } } }
-        if (c === 5) { const d = await UI.choose("Rest how long?", ["1 day", "3 days", "7 days"]); const n = [1, 3, 7][d]; for (let i = 0; i < n; i++) this.tick(false); await UI.page(`You rest ${n} day(s). Health improves.`); if (await this.checkDeaths()) { await this.gameOver(); return; } }
+        if (c === 5) { const aw = this.atWater(); const d = await UI.choose(aw ? "You are camped beside water. Rest costs nothing here and heals well. Rest how long?" : `You are in the open. Every day of rest drinks a day of water (${this.count()} skins) and heals slowly. Water left: ${Math.floor(this.waterDays())} days. Rest how long?`, ["1 day", "3 days", "7 days", "No — keep moving"]); if (d < 3) { const n = [1, 3, 7][d]; for (let i = 0; i < n; i++) this.tick(false); await UI.page(`You rest ${n} day(s). Health of the household: ${this.band(S.H)}.`); if (await this.checkDeaths()) { await this.gameOver(); return; } } }
         if (c === 6) await UI.page(S.party.map(p => `${p.name}, ${p.age}: ${p.alive ? (p.hp > 75 ? "good" : p.hp > 50 ? "fair" : p.hp > 25 ? "poor" : "very poor") + (p.ill ? " — " + p.ill : "") : "dead (" + p.cause + ")"}`).join("\n"), { title: "HOUSEHOLD" });
         if (c === 7) await UI.page(S.log.length ? S.log.map((l, i) => `${i + 1}. ${l}`).join("\n") : "Nothing yet.", { title: "TRAIL LOG" });
         UI.status(S);
@@ -360,7 +525,7 @@
       S.visited.push(stop.id); S.miles = 0;
       if (stop.date) { S.y = stop.date[0]; S.m = stop.date[1]; S.d = stop.date[2]; }
       if (S.stopIdx > 0) await UI.page(`You have reached ${stop.name.toUpperCase()}.\n${stop.book}\n\n${this.dateStr()}`, { title: stop.name.toUpperCase() });
-      if (stop.water === "spring" || stop.water === "well") S.water = Math.min(40, S.water + (stop.water === "spring" ? 30 : 8));
+      if (stop.water === "spring") S.water = this.waterCap(); else if (stop.water === "well") S.water = Math.min(this.waterCap(), S.water + 5 * this.count());
       await stop.run(this.ctx());
       UI.status(S);
       if (await this.checkDeaths()) { await this.gameOver(); this.over = true; return; }
@@ -372,13 +537,15 @@
 
     /* ---------- endings & score ---------- */
     score() {
+      // Oregon Trail scoring: 500 / 400 / 300 / 200 per survivor by health band, small bonuses, flags ±100, x role multiplier
       const S = this.S; let s = 0;
-      S.party.forEach(p => { if (p.alive) s += 100 + p.hp; });
-      s += S.flock * 2 + Math.round(S.silver / 4) + S.trust * 3;
+      const per = { good: 500, fair: 400, poor: 300, "very poor": 200 }[this.band(S.H)];
+      S.party.forEach(p => { if (p.alive) s += per + (p.hp > 75 ? 50 : 0); });
+      s += S.flock * 2 + Math.round(S.silver / 5) + Math.round(S.trust * 2);
       const good = ["marah_weak_first", "refused_calf", "gave_all", "caleb", "looked", "rahab_oath", "clean_hands", "chose_life", "weak_in_middle", "crossed_with_ark"];
       const bad = ["calf", "kept_gold", "korah", "peor", "achan", "hoarded", "sabbath_broken", "plundered_dead"];
-      good.forEach(f => { if (S.flags[f]) s += 150; }); bad.forEach(f => { if (S.flags[f]) s -= 150; });
-      return Math.max(0, s) * S.mult;
+      good.forEach(f => { if (S.flags[f]) s += 100; }); bad.forEach(f => { if (S.flags[f]) s -= 100; });
+      return Math.round(Math.max(0, s) * S.mult * (S.diff > 1 ? 1.5 : S.diff < 1 ? 0.75 : 1));
     },
     async ending() {
       const S = this.S; UI.stopAnim();
@@ -390,7 +557,7 @@
       } else {
         UI.setScene("promised");
         await UI.page(`YOU HAVE ENTERED THE LAND.\n\n${alive.length} of your household stand in the land the LORD swore to Abraham, Isaac and Jacob.\n\n${alive.map(p => "  " + p.name + ", " + p.age).join("\n")}\n\nDead on the trail: ${S.deaths.length}.\nGrumbles counted: ${S.grumbles}.\nEmunah: ${Math.round(S.trust)}.\nFlock: ${S.flock}. Silver: ${S.silver}.`, { title: "THE LAND" });
-        await UI.page(`STONES OF WITNESS\n\n${S.log.length ? S.log.map(l => "  • " + l).join("\n") : "  (none recorded)"}\n\n'A standing stone doesn't do anything if there's nobody there to tell the story.' (BEMA 34)\n\nSCORE: ${sc}  (x${S.mult} for ${SINAI.ROLES.find(r => r.id === S.role).name})`, { title: "" });
+        await UI.page(`STONES OF WITNESS\n\n${S.log.length ? S.log.map(l => "  • " + l).join("\n") : "  (none recorded)"}\n\n'A standing stone doesn't do anything if there's nobody there to tell the story.'\n\nSCORE: ${sc}  (x${S.mult} for ${SINAI.ROLES.find(r => r.id === S.role).name})`, { title: "" });
         await UI.page("'Now fear the LORD and serve Him with all faithfulness. Throw away the gods your ancestors worshiped beyond the Euphrates and in Egypt... But as for me and my household, we will serve the LORD.' (Joshua 24:14-15)\n\nThe land is not a fortress. It is a crossroads. Go and be a blessing.", { title: "" });
       }
       await this.recordScore(sc);
@@ -430,6 +597,6 @@
       }
     }
   };
-  window.Game = Game;
+  window.Game = Game; window.UI = UI;
   window.addEventListener("load", () => Game.main());
 })();
