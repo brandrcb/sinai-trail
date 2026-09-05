@@ -512,7 +512,7 @@
     for (let i = 0; i < 3; i++) { rect(258 + (i % 2) * 6, 70 + Math.floor(i / 2) * 4, 5, 2, "#6b4a2a"); px(260 + (i % 2) * 6, 69 + Math.floor(i / 2) * 4, "#c98a2e"); }
     const rope = new Bmp(10, 6); rope.ellipse(5, 3, 4.5, 2.5, "#c9b99a"); rope.ellipse(5, 3, 2, 1, REGION.sinai.sand); rope.outline("#8a7a62"); rope.draw(ctx, 236, 82, P);
     // traders behind the counters
-    personHero("man", 3, 0).draw(ctx, 28, 84 - 30 + 4, P); personHero("woman", 4, 0, { jar: false }).draw(ctx, 138, 84 - 30 + 4, P); personHero("elder", 5, 0).draw(ctx, 236, 84 - 30 + 4, P);
+    personHero("man", 1, 0).draw(ctx, 28, 84 - 30 + 4, P); personHero("woman", 4, 0, { jar: false }).draw(ctx, 138, 84 - 30 + 4, P); personHero("elder", 5, 0).draw(ctx, 236, 84 - 30 + 4, P);
     // pens in the foreground: sheep left, donkeys right, a camel tethered between
     fence(4, 118, 96); for (let i = 0; i < 8; i++) { const sh = sheepHero(f + i); sh.draw(ctx, 8 + (i % 4) * 22 + (Math.floor(i / 4) * 6), 118 - sh.h - (i < 4 ? 8 : 0), P); }
     fence(180, 118, 96); for (let i = 0; i < 3; i++) { const d = donkeyHero((f + i) % 3, {}); d.draw(ctx, 184 + i * 30, 116 - d.h + (i % 2) * 2, P); }
