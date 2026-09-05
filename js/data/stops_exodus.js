@@ -170,6 +170,7 @@ SINAI.STOPS.push({
     if (c === 0) { const n = g.grumble("Rephidim (Massah)"); g.trust(-4); await g.page("The place gets two names for what you just did: MASSAH (testing) and MERIBAH (quarreling).\n\n'The issue is not that they asked for water. The issue is that they demanded it, as if Yahweh didn't intend to provide.'\n\nGRUMBLES: " + n + " of 10."); }
     else if (c === 1) { g.trust(5); await g.page("Asking is not testing. Gideon asked for a fleece and was not counted a rebel. 'Help me in my unbelief' is not the same as 'unless you do X, I won't move.' EMUNAH rises."); }
     else { g.trust(3); g.flag("shielded_moses"); await g.page("Moses sees you. The elders see you. Nothing comes of it today. Something may."); }
+    g.flag("rock_struck");
     await g.page("The LORD to Moses: 'Walk on ahead of the people. Take some elders. Take the staff. I will STAND THERE BEFORE YOU by the rock at Horeb. Strike the rock, and water will come out of it' (Ex 17:5-6).\n\nThe word for strike is NAKAH — to smite, to strike in order to kill. The same word used of the Egyptian beating the slave. And the LORD stands PANIYM — in front of the face of — the rock.\n\nMoses strikes. Water pours out of the mountain. The elders have just watched a God who steps in front of the blow.");
     g.water(20);
     await g.insight("BEMA 21 · 'With All Your Soul'",

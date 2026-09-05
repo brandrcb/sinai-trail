@@ -19,7 +19,10 @@
   const vgrad = (y0, y1, c0, c1) => { for (let y = y0; y < y1; y++) rect(0, y, W, 1, mix(c0, c1, (y - y0) / Math.max(1, y1 - y0 - 1))); };
   const text = (s, x, y, c, size) => { ctx.fillStyle = c; ctx.font = (size || 12) + "px 'Press Start 2P', monospace"; ctx.fillText(s, x * P, y * P); };
   const textC = (s, y, c, size) => { ctx.font = (size || 12) + "px 'Press Start 2P', monospace"; const w = ctx.measureText(s).width; ctx.fillStyle = c; ctx.fillText(s, (W * P - w) / 2, y * P); };
-  const sprite = (art, x, y, pal) => {
+  const INK = "#2a1a10";
+  const sprite = (art, x, y, pal) => { // v0.6: one-pass ink outline so figures separate from the sand (the 1992 look)
+    const on = (i, j) => j >= 0 && j < art.length && i >= 0 && i < art[j].length && art[j][i] !== "." && art[j][i] !== " " && pal[art[j][i]];
+    for (let j = -1; j <= art.length; j++) for (let i = -1; i <= (art[0] || "").length; i++) if (!on(i, j) && (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1))) px(x + i, y + j, INK);
     for (let j = 0; j < art.length; j++) for (let i = 0; i < art[j].length; i++) {
       const ch = art[j][i]; if (ch === "." || ch === " ") continue;
       const c = pal[ch]; if (c) px(x + i, y + j, c);
@@ -49,7 +52,7 @@
   const regionFor = idx => idx <= 5 ? "sinai" : idx <= 9 ? "paran" : idx <= 12 ? "arabah" : "moab";
   const PEOPLE = { // robe colours per household member
     robes: ["#a63d2f", "#3d6aa6", "#7a4f9e", "#c98a2e", "#3f8a5a", "#8a3f6a"],
-    skin: "#d9a066", skin2: "#b8794a", hair: "#2b1a12", veil: "#eadbc0", veil2: "#c6b394", belt: "#4a2f1a", staff: "#6b4a2a"
+    skin: "#c98c5a", skin2: "#a86e42", hair: "#2b1a12", veil: "#eadbc0", veil2: "#c6b394", belt: "#4a2f1a", staff: "#6b4a2a"
   };
 
   /* ---------- sprites (colour) ---------- */
@@ -134,11 +137,9 @@
     if (t > 0.86) { const mt = (t - 0.86) / 0.14; const mx = 240 - mt * 200, my = 20 + Math.sin(mt * Math.PI) * -8; rect(mx - 2, my - 3, 5, 7, "#e8e8f0"); rect(mx - 3, my - 2, 7, 5, "#e8e8f0"); rect(mx, my - 2, 3, 5, "#b9b9d0"); }
     if (t > 0.88 || t < 0.03) for (let i = 0; i < 50; i++) if (hash(i, 77) < 0.9) px(hash(i, 3) * W, hash(i, 7) * 55, (i + Math.floor(T * 2)) % 7 ? "#dfe6ff" : "#ffffff");
   }
-  function nationLine(y, scroll) { // the whole camp on the move, far away
-    for (let i = 0; i < W; i += 2) { const wx = i + scroll * 0.25; if (hash(Math.floor(wx / 2), 41) < 0.5) px(i, y - 1 + Math.floor(hash(Math.floor(wx / 2), 42) * 2), "#3a2a20"); }
-  }
-  function pillar(x, y, t, night) {
-    // pillar of cloud by day, fire by night (Ex 13:21)
+  function nationLine(y, scroll) { SINAI.ArtV06.nationSilhouette(y, scroll); } // v0.6: people, tents, beasts and standards to the horizon
+  function pillar(x, y, t, night) { SINAI.ArtV06.pillar(x, y, t, night); } // v0.6: a real column, ground to sky
+  function pillarOld(x, y, t, night) {
     const top = 2;
     for (let j = top; j < y; j++) {
       const w = 5 + Math.sin(j * 0.25 + T * 1.5) * 2 + Math.sin(j * 0.08 - T) * 3 + (j < 20 ? (20 - j) * 0.35 : 0);
@@ -206,18 +207,18 @@
     nationLine(70, scroll);
     const night = tod > 0.86 || tod < 0.02;
     pillar(236, 84, T, night);
-    column(St, T, 205, 100);
+    SINAI.ArtV06.heroGroupFor(St, T, 190, 118); // v0.6 Layout 2: the household stands large in the frame
     weatherFX(w, tod); nightShade(tod);
     if (night) { ctx.save(); ctx.globalAlpha = 0.35; rect(0, 0, W, H, "#000"); ctx.restore(); pillar(236, 84, T, true); }
   };
   S.event = S.travel;
   S.title = (t) => {
     landscape({ region: "sinai", t: 0.8, scroll: T * 8, bigMountain: true });
-    nationLine(70, T * 8); pillar(236, 84, T, false); column(null, T, 205, 100);
+    nationLine(70, T * 8); pillar(236, 84, T, false); SINAI.ArtV06.heroGroupFor(null, T, 190, 118, { sheep: 3 });
     nightShade(0.8);
-    ctx.save(); ctx.globalAlpha = 0.55; rect(20, 14, 240, 40, "#1a0e06"); ctx.restore();
-    textC("THE EXODUS TRAIL", 34, "#ffd86a", 16); textC("From the Sea of Reeds to Jericho", 46, "#f5e9cf", 7);
-    textC("D E L U X E   E D I T I O N", 108, "#f5e9cf", 6);
+    ctx.save(); ctx.globalAlpha = 0.6; rect(20, 10, 240, 46, "#1a0e06"); ctx.restore(); rect(20, 10, 240, 1, "#e6b422"); rect(20, 55, 240, 1, "#e6b422");
+    textC("THE EXODUS TRAIL", 30, "#ffd86a", 16); textC("From the Sea of Reeds to Jericho", 41, "#f5e9cf", 7);
+    textC("D E L U X E   E D I T I O N", 51, "#e6b422", 5);
   };
   S.sea = (t) => { landscape({ region: "sinai", t: 0.3, water: { y: 72, h: 24 }, flat: true }); rect(0, 96, W, 24, REGION.sinai.sand); for (let x = 0; x < W; x += 3) if (hash(x, 1) < 0.5) px(x, 96, "#a9d8f2"); for (let i = 0; i < 14; i++) person("woman", i + 3, 8 + i * 17, 94 + (i % 3) * 2, T * 0.6); column(null, T * 0.4, 250, 119, { dust: false }); };
   S.marah = (t) => { landscape({ region: "sinai", t: 0.5 }); rect(100, 94, 70, 10, "#6b7a3a"); for (let i = 0; i < 70; i += 3) px(100 + i, 94 + (i % 2), "#8a9a4a"); person("man", 0, 88, 78, 0); person("man", 1, 172, 78, 0); person("woman", 2, 184, 78, 0); person("kid", 3, 70, 82, 0); sprite(BUSH, 40, 86, PAL.bush); rect(96, 84, 1, 10, "#8a6a3a"); rect(97, 83, 1, 1, "#8a6a3a"); };
@@ -229,7 +230,7 @@
   S.fire = (t) => { landscape({ region: "paran", t: 0.93, clouds: false }); for (let i = 0; i < 6; i++) sprite(TENT, 20 + i * 20, 104 - (i % 2) * 6, PAL.tent(i)); for (let i = 0; i < 5; i++) { const x = 220 + i * 10, fl = Math.floor(T * 10 + i) % 3; rect(x + 1, 86 - fl, 3, 3 + fl, "#ffd23f"); rect(x, 88, 5, 4, "#ff8c2a"); rect(x + 2, 84 - fl, 1, 2, "#ffffff"); } ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = "#ff8c2a"; ctx.beginPath(); ctx.arc(245 * P, 88 * P, 40 * P, 0, 7); ctx.fill(); ctx.restore(); sprite(SHEEP[0], 100, 108, PAL.sheep); sprite(SHEEP[1], 112, 110, PAL.sheep); nightShade(0.93); };
   S.camp = (t) => { landscape({ region: "paran", t: 0.15 }); for (let i = 0; i < 7; i++) sprite(TENT, 4 + i * 18 + (i % 2) * 4, 104 - (i % 2) * 6, PAL.tent(i)); for (let i = 0; i < 5; i++) sprite(TENT, 176 + i * 18, 104 - (i % 2) * 6, PAL.tent(i + 2)); tabernacle(110, 116); sprite(SHEEP[Math.floor(T * 2) % 2], 20, 112, PAL.sheep); sprite(SHEEP[0], 34, 114, PAL.sheep); person("woman", 2, 200, 96, 0); };
   S.oasis = (t) => { landscape({ region: "paran", t: 0.35, water: { y: 100, h: 6 } }); for (let i = 0; i < 6; i++) sprite(PALM, 20 + i * 24, 66 - (i % 2) * 5, PAL.palm); for (let i = 0; i < 4; i++) sprite(TENT, 180 + i * 20, 112 - (i % 2) * 4, PAL.tent(i)); person("man", 0, 150, 80, 0); person("man", 1, 162, 80, 0); rect(150, 76, 22, 1, "#8a6a3a"); rect(158, 77, 6, 6, "#7a4f9e"); };
-  S.wander = (t, St) => { landscape({ region: "paran", t: 0.6, scroll: T * 12 }); nationLine(70, T * 12); for (let i = 0; i < 6; i++) sprite(GRAVE, 10 + i * 46, 104, PAL.grave); column(St, T, 205, 100); };
+  S.wander = (t, St) => { landscape({ region: "paran", t: 0.6, scroll: T * 12 }); nationLine(70, T * 12); for (let i = 0; i < 6; i++) sprite(GRAVE, 10 + i * 46, 104, PAL.grave); SINAI.ArtV06.heroGroupFor(St, T, 190, 118); };
   S.mountain = (t) => { landscape({ region: "arabah", t: 0.4, bigMountain: true, clouds: false }); person("man", 4, 130, 14, 0); person("man", 5, 140, 14, 0); person("man", 0, 150, 16, 0); for (let i = 0; i < 5; i++) sprite(TENT, 10 + i * 18, 112 - (i % 2) * 4, PAL.tent(i)); for (let i = 0; i < 4; i++) sprite(TENT, 190 + i * 18, 112 - (i % 2) * 4, PAL.tent(i)); text("MOUNT HOR", 100, 117, "#3a2a1a", 7); };
   S.arabah = (t) => { landscape({ region: "arabah", t: 0.45 }); rect(139, 40, 2, 62, "#8a6a3a"); sprite(SNAKE, 135, 24, PAL.snake); person("man", 1, 90, 82, 0); person("woman", 2, 102, 82, 0); person("man", 3, 180, 82, 0); person("kid", 0, 194, 86, 0); for (let i = 0; i < 6; i++) { const x = 30 + i * 44, y = 104 + (i % 2) * 6; for (let k = 0; k < 5; k++) px(x + k, y + (k % 2), "#d08a2a"); } };
   S.battle = (t) => { landscape({ region: "moab", t: 0.4 }); for (let i = 0; i < 8; i++) person(i % 2 ? "man" : "man", i, 16 + i * 12, 78 + (i % 2) * 8, T); for (let i = 0; i < 8; i++) { const p = PAL.man(i); sprite(MAN_TOP, 170 + i * 12, 78 + (i % 2) * 8, Object.assign({}, p, { r: "#4a4a5a", v: "#7a7a8a" })); sprite(LEGS[walkFrame(T + i)], 170 + i * 12, 89 + (i % 2) * 8, p); } for (let i = 0; i < 6; i++) { const x = 110 + i * 8, y = 82 + (Math.floor(T * 6) + i) % 3; rect(x, y, 8, 1, "#e8e8f0"); } };
@@ -242,14 +243,20 @@
     else { for (let i = 0; i < 80; i++) { const bx = x + hash(i, 4) * 116 - 10, by = y - hash(i, 5) * 14; rect(bx, by, 2 + hash(i, 6) * 5, 2, i % 2 ? "#b8a07a" : "#a8906a"); } rect(x + 78, y - 30, 8, 30, "#b8a07a"); rect(x + 78, y - 30, 8, 1, "#e8ddc0"); rect(x + 80, y - 24, 4, 3, "#a63d2f"); for (let i = 0; i < 12; i++) { ctx.save(); ctx.globalAlpha = 0.5; px(x + hash(i, 8) * 100, y - 40 - ((T * 10 + i * 4) % 30), "#e8ddc0"); ctx.restore(); } }
   }
   S.scroll = (t) => { vgrad(0, H, "#2a1a0e", "#4a3220"); rect(30, 10, 220, 100, "#e8d9b5"); rect(30, 10, 220, 100, "#e8d9b5"); rect(22, 6, 12, 108, "#8a6a3a"); rect(246, 6, 12, 108, "#8a6a3a"); rect(24, 8, 8, 104, "#b08a4a"); rect(248, 8, 8, 104, "#b08a4a"); for (let j = 22; j < 100; j += 6) for (let i = 44; i < 236; i += 3) if (hash(i, j) > 0.35) px(i, j, "#8a7a62"); rect(60, 52, 160, 16, "#e8d9b5"); textC("SCROLL OF INSIGHT", 64, "#5a2a12", 10); };
-  S.grave = (t) => { landscape({ region: "paran", t: 0.86, clouds: false }); sprite(GRAVE, 130, 86, { k: "#d9c9a8" }); for (let i = 0; i < 6; i++) rect(120 + i * 4, 96 + (i % 2) * 2, 3, 2, "#9a8a78"); sprite(BUSH, 90, 100, PAL.bush); sprite(BUSH, 180, 98, PAL.bush); nightShade(0.86); };
+  S.grave = (t, St) => { const d = St && St.deaths && St.deaths.length ? St.deaths[St.deaths.length - 1] : null; if (d) { SINAI.ArtV06.grave(d.name, d.cause, St.y || 1, "deluxe"); return; } landscape({ region: "paran", t: 0.86, clouds: false }); sprite(GRAVE, 130, 86, { k: "#d9c9a8" }); for (let i = 0; i < 6; i++) rect(120 + i * 4, 96 + (i % 2) * 2, 3, 2, "#9a8a78"); sprite(BUSH, 90, 100, PAL.bush); sprite(BUSH, 180, 98, PAL.bush); nightShade(0.86); };
   S.store = (t) => { landscape({ region: "sinai", t: 0.3, water: { y: 104, h: 16 }, flat: true }); sprite(DONKEY[0], 60, 84, PAL.donkey(0)); sprite(DONKEY[1], 90, 84, PAL.donkey(1)); for (let i = 0; i < 8; i++) sprite(SHEEP[i % 2], 130 + i * 10, 92 + (i % 3) * 3, PAL.sheep); person("man", 0, 30, 82, 0); person("woman", 1, 42, 82, 0); rect(208, 82, 34, 16, "#8a6a3a"); rect(210, 84, 30, 12, "#e8d9b5"); for (let i = 0; i < 6; i++) rect(212 + i * 5, 86, 3, 3, "#e6b422"); for (let i = 0; i < 6; i++) rect(212 + i * 5, 92, 3, 3, "#dfe6ff"); };
   S.promised = (t) => { landscape({ region: "moab", t: 0.2 }); ctx.save(); ctx.globalAlpha = 0.6; rect(0, 84, W, 36, "#6f9a4a"); ctx.restore(); for (let i = 0; i < 5; i++) sprite(PALM, 20 + i * 55, 66, PAL.palm); for (let i = 0; i < 12; i++) rect(150 + (i % 6) * 5, 96 + Math.floor(i / 6) * 5, 3, 3, "#7a4f9e"); person("man", 0, 100, 84, 0); person("woman", 1, 112, 84, 0); person("kid", 2, 124, 88, 0); sprite(SHEEP[0], 134, 104, PAL.sheep); };
   S.stones = (t) => { landscape({ region: "moab", t: 0.9, flat: true, clouds: false }); for (let i = 0; i < 12; i++) { const x = 40 + (i % 6) * 36, y = 84 - Math.floor(i / 6) * 12; rect(x, y, 8, 14, "#7a6a58"); rect(x + 1, y + 1, 6, 12, "#a8987f"); rect(x + 2, y + 2, 2, 4, "#d9c9a8"); } text("GILGAL", 110, 116, "#f5e9cf", 8); nightShade(0.9); };
 
   SINAI.ScenesDeluxe = {
     W, H, P,
-    draw(c, name, tSec, St, opts, travel) { ctx = c; T = Math.max(0, tSec || 0); ctx.imageSmoothingEnabled = false; (S[name] || S.travel)(T, St, opts, travel); },
+    draw(c, name, tSec, St, opts, travel) {
+      ctx = c; T = Math.max(0, tSec || 0); ctx.imageSmoothingEnabled = false; const A = SINAI.ArtV06; A.setCtx(c, T);
+      if (name === "store") name = "card:store";
+      if (name && name.indexOf("card:") === 0) { const card = A.CARD[name.slice(5)]; if (card) { card(Math.floor(T * 6) % 3, T, opts, St); return; } name = "camp"; }
+      if (name && name.indexOf("event:") === 0) { const v = A.VIG[A.VIG_FOR[name.slice(6)]]; if (v) { v(Math.floor(T * 6) % 3); return; } name = "event"; }
+      (S[name] || S.travel)(T, St, opts, travel);
+    },
     names: Object.keys(S)
   };
 })();

@@ -26,6 +26,7 @@
   const NILE = [[31.4, 29.7], [31.7, 30.2], [32.0, 30.7], [32.3, 31.35]];
 
   function draw(S) {
+    if (document.body.classList.contains("deluxe")) { SINAI.ArtV06.setCtx(ctx, frame * 0.4); SINAI.ArtV06.parchmentMap(S); return; }
     ctx.fillStyle = C.k; ctx.fillRect(0, 0, W * P, H * P);
     // land texture
     for (let i = 0; i < 700; i++) px(hash(i, 1) * W, hash(i, 2) * H, "#0b3a0b");

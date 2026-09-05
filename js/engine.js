@@ -38,6 +38,7 @@
       document.body.classList.toggle("deluxe", this.look === "deluxe");
       this.canvas.height = this.look === "deluxe" ? SINAI.ScenesDeluxe.H * SINAI.ScenesDeluxe.P : 192;
       $("lookbtn").textContent = this.look === "deluxe" ? "LOOK: DELUXE (L)" : "LOOK: CLASSIC (L)";
+      if (Game.S) this.status(Game.S);
       try { localStorage.setItem("sinai_look", this.look); } catch (e) { }
       if (!silent) { this.frame = 0; this.paint(); }
     },
@@ -113,8 +114,9 @@
       });
     },
     status(S) {
-      const st = $("status");
-      if (!S) { st.innerHTML = ""; return; }
+      const st = $("status"); const pc = $("party");
+      if (!S) { st.innerHTML = ""; if (pc) pc.hidden = true; return; }
+      if (pc) { pc.hidden = false; const c = pc.getContext("2d"); c.imageSmoothingEnabled = false; c.fillStyle = this.look === "deluxe" ? "#e9dcb9" : "#000"; c.fillRect(0, 0, pc.width, pc.height); SINAI.ArtV06.setCtx(c, 0); SINAI.ArtV06.portraitStrip(4, 2, S.party, this.look); }
       const h = Game.band(S.H) + (S.party.some(p => p.alive && p.ill) ? " (illness)" : "");
       st.innerHTML =
         `<span>Date: ${Game.dateStr()}</span><span>Weather: ${S.weather}</span><span>Health: ${h}</span>` +
@@ -514,14 +516,14 @@
       let tot = pool.reduce((a, e) => a + e.w, 0), r = rnd() * tot, ev = pool[0];
       for (const e of pool) { r -= e.w; if (r <= 0) { ev = e; break; } }
       S.lastEvent = ev.id;
-      UI.stopAnim(); this.curScene = "event";
+      UI.stopAnim(); this.curScene = SINAI.ArtV06.VIG_FOR[ev.id] ? "event:" + ev.id : "event";
       await ev.run(this.ctx());
       UI.status(S); UI.startAnim();
     },
 
     async arrive() {
       const S = this.S; const stop = SINAI.STOPS[S.stopIdx];
-      UI.stopAnim(); this.curScene = stop.scene; UI.setScene(stop.scene); UI.startAnim();
+      UI.stopAnim(); this.curScene = SINAI.ArtV06.CARD[stop.id] ? "card:" + stop.id : stop.scene; UI.setScene(this.curScene); UI.startAnim();
       S.visited.push(stop.id); S.miles = 0;
       if (stop.date) { S.y = stop.date[0]; S.m = stop.date[1]; S.d = stop.date[2]; }
       if (S.stopIdx > 0) await UI.page(`You have reached ${stop.name.toUpperCase()}.\n${stop.book}\n\n${this.dateStr()}`, { title: stop.name.toUpperCase() });

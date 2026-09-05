@@ -16,6 +16,9 @@ html, body { margin: 0; background: #0a0a0a; color: var(--g); font-family: 'VT32
 #menu li.cont { color: var(--dg); animation: blink 1.4s steps(2) infinite; }
 #menu li.inp input { background: var(--k); color: var(--g); border: none; border-bottom: 2px solid var(--g); font-family: inherit; font-size: 22px; width: 260px; outline: none; }
 #menu .k { color: var(--w); }
+#party { display: block; width: 100%; max-width: 560px; height: auto; image-rendering: pixelated; margin-top: 8px; border-top: 1px dashed var(--dg); padding-top: 6px; }
+#party[hidden] { display: none; }
+body.deluxe #party { border-top: 2px solid #b58a4a; }
 #status { display: flex; flex-wrap: wrap; gap: 4px 18px; border-top: 1px dashed var(--dg); margin-top: 10px; padding-top: 6px; font-size: 18px; color: var(--dg); min-height: 22px; }
 #status span { white-space: nowrap; }
 #scanlines { pointer-events: none; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }

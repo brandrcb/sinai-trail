@@ -52,7 +52,7 @@
   function mountains(base, pts, c, fill) { const p = [[0, base]].concat(pts).concat([[W, base]]); if (fill) { poly(p, fill); } for (let i = 0; i < p.length - 1; i++) line(p[i][0], p[i][1], p[i + 1][0], p[i + 1][1], c); }
   function caravan(x, y, f, big) {
     const a = f % 2;
-    sprite(CLOUD, x + 120, y - 30);
+    SINAI.ArtV06.pillar(x + 125, y, f / 6, false); // v0.6: a real column
     sprite(MAN[a], x + 100, y - 12); sprite(DONKEY[a], x + 74, y - 12); sprite(WOMAN[a], x + 64, y - 12); sprite(KID[a], x + 56, y - 8);
     sprite(MAN[a], x + 44, y - 12); sprite(SHEEP[a], x + 30, y - 5); sprite(SHEEP[(f + 1) % 2], x + 20, y - 6); sprite(SHEEP[a], x + 10, y - 4); sprite(KID[(f + 1) % 2], x + 2, y - 8);
     if (big) { sprite(MAN[a], x - 12, y - 12); sprite(DONKEY[(f + 1) % 2], x - 36, y - 12); sprite(WOMAN[(f + 1) % 2], x - 46, y - 12); }
@@ -72,7 +72,7 @@
   S.marah = (f) => { sky(); sun(230, 10); mountains(64, [[40, 30], [90, 40], [130, 20], [200, 46]], C.g); ground(64, 0); rect(100, 70, 60, 10, C.b); dither(100, 70, 60, 10, C.k); sprite(MAN[0], 90, 52); sprite(MAN[1], 165, 52); sprite(WOMAN[0], 175, 52); sprite(KID[0], 60, 56); sprite(BUSH, 40, 60); line(96, 58, 108, 68, C.w); };
   S.elim = (f) => { sky(); sun(40, 10); ground(66, 0); for (let i = 0; i < 9; i++) sprite(PALM, 10 + i * 30 + (i % 2) * 6, 40 - (i % 3) * 6); water(74, 8, f); water(84, 6, f); camp(150, 90, 4); sprite(WOMAN[0], 60, 62); sprite(KID[1], 72, 66); sprite(SHEEP[0], 120, 80); sprite(SHEEP[1], 132, 82); };
   S.desert = (f) => { sky(); sun(140, 10); mountains(62, [[60, 42], [120, 52], [180, 36], [240, 50]], C.g); ground(62, 0); caravan(60, 62, f); for (let i = 0; i < 60; i++) px(hash(i, 11) * W, 64 + hash(i, 12) * 30, C.w); text("MANNA", 200, 90, C.w, 6); };
-  S.rock = (f) => { sky(); sun(30, 10); mountains(56, [[100, 8], [140, 14], [170, 6], [230, 30]], C.g, "#062"); rect(120, 30, 40, 26, C.k); rect(120, 30, 40, 26); dither(122, 32, 36, 22, C.k); line(140, 44, 138, 70, C.b); line(141, 44, 140, 72, C.b); water(72, 4, f); ground(70, 0); sprite(MAN[0], 100, 40, { "#": C.w }); line(104, 36, 96, 44, C.w); sprite(MAN[1], 60, 60); sprite(WOMAN[0], 70, 60); sprite(MAN[0], 190, 60); sprite(KID[0], 200, 64); };
+  S.rock = (f, St) => { sky(); sun(30, 10); mountains(56, [[100, 8], [140, 14], [170, 6], [230, 30]], C.g, "#062"); rect(120, 30, 40, 26, C.k); rect(120, 30, 40, 26); dither(122, 32, 36, 22, C.k); if (St && St.flags && St.flags.rock_struck) { line(140, 44, 138, 70, C.b); line(141, 44, 140, 72, C.b); water(72, 4, f); } ground(70, 0); sprite(MAN[0], 100, 40, { "#": C.w }); line(104, 36, 96, 44, C.w); sprite(MAN[1], 60, 60); sprite(WOMAN[0], 70, 60); sprite(MAN[0], 190, 60); sprite(KID[0], 200, 64); };
   S.sinai = (f) => { sky(); mountains(74, [[80, 60], [120, 8], [150, 4], [180, 12], [220, 60]], C.g, "#041"); for (let i = 0; i < 14; i++) px(130 + hash(i, 5) * 40, hash(i, 6) * 10, C.w); if (f % 4 < 2) { line(150, 4, 146, 0, C.w); line(150, 4, 156, 0, C.w); } dither(110, 12, 80, 30, C.w, 0.5); rect(90, 62, 120, 1, C.o); ground(74, 0); camp(10, 92, 5); camp(200, 92, 4); tabernacle(122, 92); };
   S.fire = (f) => { sky(true); ground(66, 0); camp(30, 84, 6); camp(150, 90, 4); for (let i = 0; i < 4; i++) { const x = 230 + i * 10; sprite(["..o..", ".ooo.", "ooooo", ".o.o."], x, 60 - (f + i) % 3 * 2); } for (let i = 0; i < 20; i++) px(hash(i, 8) * 280, 64 + hash(i, 9) * 30, C.o); sprite(SHEEP[0], 100, 80); sprite(SHEEP[1], 112, 82); };
   S.camp = (f) => { sky(); sun(250, 10); mountains(62, [[50, 40], [100, 48], [160, 34], [220, 50]], C.g); ground(62, 0); camp(6, 80, 7); camp(160, 78, 5); tabernacle(110, 92); sprite(SHEEP[f % 2], 20, 88); sprite(SHEEP[0], 34, 90); sprite(WOMAN[0], 200, 82); };
@@ -102,13 +102,13 @@
   };
   S.event = S.travel;
   S.scroll = (f) => { sky(); rect(20, 6, 240, 84, C.k); rect(20, 6, 240, 84); rect(22, 8, 236, 80, C.k); rect(14, 4, 8, 88, C.w); rect(258, 4, 8, 88, C.w); for (let j = 16; j < 84; j += 6) for (let i = 34; i < 246; i += 3) if (hash(i, j) > 0.35) px(i, j, C.d); text("SCROLL OF INSIGHT", 60, 50, C.g, 10); };
-  S.grave = (f) => { sky(true); mountains(70, [[40, 50], [100, 30], [160, 56], [220, 40]], C.g); ground(70, 0); sprite(GRAVE, 130, 50, { "#": C.w }); for (let i = 0; i < 6; i++) rect(120 + i * 4, 60 + (i % 2) * 2, 3, 2); sprite(BUSH, 90, 66); sprite(BUSH, 180, 64); };
+  S.grave = (f, St) => { const d = St && St.deaths && St.deaths.length ? St.deaths[St.deaths.length - 1] : null; if (d) { SINAI.ArtV06.grave(d.name, d.cause, St.y || 1, "classic"); return; } sky(true); mountains(70, [[40, 50], [100, 30], [160, 56], [220, 40]], C.g); ground(70, 0); sprite(GRAVE, 130, 50, { "#": C.w }); for (let i = 0; i < 6; i++) rect(120 + i * 4, 60 + (i % 2) * 2, 3, 2); sprite(BUSH, 90, 66); sprite(BUSH, 180, 64); };
   S.store = (f) => { sky(); sun(30, 10); ground(64, 0); water(80, 16, f); sprite(DONKEY[0], 60, 52); sprite(DONKEY[1], 90, 52); for (let i = 0; i < 8; i++) sprite(SHEEP[i % 2], 130 + i * 10, 58 + (i % 3) * 3); sprite(MAN[0], 30, 52); sprite(WOMAN[0], 40, 52); rect(210, 50, 30, 14, C.k); rect(210, 50, 30, 14); for (let i = 0; i < 6; i++) rect(212 + i * 5, 52, 3, 3, C.o); for (let i = 0; i < 6; i++) rect(212 + i * 5, 58, 3, 3, C.w); };
   S.promised = (f) => { sky(); sun(40, 10, C.w); mountains(56, [[60, 36], [120, 44], [180, 30], [240, 44]], C.g, "#041"); ground(56, 0); dither(0, 58, W, 38, C.g, 0.5); for (let i = 0; i < 5; i++) sprite(PALM, 20 + i * 55, 40); for (let i = 0; i < 12; i++) rect(150 + (i % 6) * 4, 70 + Math.floor(i / 6) * 4, 3, 3, C.p); sprite(MAN[0], 100, 60); sprite(WOMAN[0], 110, 60); sprite(KID[0], 120, 64); sprite(SHEEP[0], 130, 68); };
   S.stones = (f) => { sky(true); ground(70, 0); for (let i = 0; i < 12; i++) { const x = 40 + (i % 6) * 36, y = 58 - Math.floor(i / 6) * 10; rect(x, y, 8, 12, C.k); rect(x, y, 8, 12); rect(x + 1, y + 1, 6, 10, C.k); } text("GILGAL", 110, 92, C.w, 8); };
 
   SINAI.Scenes = {
-    draw(c, name, f, St, opts) { ctx = c; ctx.imageSmoothingEnabled = false; (S[name] || S.travel)(f, St, opts); },
+    draw(c, name, f, St, opts) { ctx = c; ctx.imageSmoothingEnabled = false; SINAI.ArtV06.setCtx(c, f / 6); if (name && name.indexOf(":") > 0) name = name.indexOf("card:") === 0 ? (SINAI.STOPS.find(s => s.id === name.slice(5)) || {}).scene || "camp" : "event"; (S[name] || S.travel)(f, St, opts); },
     names: Object.keys(S)
   };
 })();
