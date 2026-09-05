@@ -22,13 +22,13 @@ SINAI.STOPS.push({
     if (c === 0) {
       g.trust(6); g.heal(6); g.days(1);
       g.log("Sang the Song of the Sea");
-      await g.page("You sing until your voice is gone. Your children learn the words. That night, for the first time since the brick-pits, everyone in your tent sleeps.\n\n'The saving act finishes there — not when they get through the sea, but when they have rejoiced and given thanks.'\n\nEMUNAH rises. Health improves.");
+      await g.page("You sing until your voice is gone. Your children learn the words. That night, for the first time since the brick-pits, everyone in your tent sleeps.\n\n'The saving act finishes there — not when they get through the sea, but when they have rejoiced and given thanks.'\n\nFAITH rises. Health improves.");
     } else if (c === 1) {
       g.flag("sorted"); g.log("Prepared the baggage at the shore");
       await g.page("Sensible. You re-lash the loads, count the skins, and notice that the unleavened dough will last perhaps four days. The song goes on without you.\n\nA rabbi would say: 'We have to teach our children how to dance.' But you have donkeys to see to.");
     } else {
       g.silver(60); g.flag("plundered_dead"); g.trust(-5); g.log("Stripped the Egyptian dead");
-      await g.page("You wade among the drowned and come back with a bronze sword, two rings and a purse. +60 shekels.\n\nNobody stops you. But the text says the LORD 'fought for you while you kept silent' (Ex 14:14), and you have begun the journey by taking. EMUNAH falls slightly. Remember this at Jericho.");
+      await g.page("You wade among the drowned and come back with a bronze sword, two rings and a purse. +60 shekels.\n\nNobody stops you. But the text says the LORD 'fought for you while you kept silent' (Ex 14:14), and you have begun the journey by taking. FAITH falls slightly. Remember this at Jericho.");
     }
     await g.insight("BEMA 20 · 'With All Your Heart'",
       "The word does not mean Red Sea. YAM SUPH is the Sea of Reeds. God led them SOUTH into a dead end — Pharaoh behind, mountains beside, water in front — so that the lesson of the day was 'stand and watch.' And the very next verse is: 'Why are you crying out to Me? Tell the Israelites to move on.'\n\nNow He is taking them to the desert, because 'He's got to get Egypt out of them.'");
@@ -61,7 +61,7 @@ SINAI.STOPS.push({
       await g.page("Your voice joins the roar. 'If we were honest,' says one teacher, 'I think we'd hear an awful lot of our own voices in these verses'. Still — the LORD hears it, and He counts.\n\nGRUMBLES: " + n + " of 10.");
     } else if (c === 1) {
       g.trust(4);
-      await g.page("You hold your tongue and hold your children's hands. Moses cries out to the LORD. EMUNAH rises.");
+      await g.page("You hold your tongue and hold your children's hands. Moses cries out to the LORD. FAITH rises.");
     } else {
       const who = g.sick("dysentery");
       await g.page("You drink. Within the hour " + who + " is doubled over with cramps. Brackish water is a slow poison. " + who + " has DYSENTERY.");
@@ -74,17 +74,17 @@ SINAI.STOPS.push({
     ]);
     if (d === 1) {
       g.trust(8); g.flag("marah_weak_first"); g.log("Let the weak drink first at Marah");
-      await g.page("You stand in the sun while old women, a boy with a fever and a mother with twins drink before you. It takes an hour. When your turn comes there is still water; there is always still water.\n\n'A test is always about two things: what you give and what you get. Every test is an opportunity to show God and to grow in God.'\n\nEMUNAH rises. You have passed the TEST OF THE HEART.");
+      await g.page("You stand in the sun while old women, a boy with a fever and a mother with twins drink before you. It takes an hour. When your turn comes there is still water; there is always still water.\n\n'A test is always about two things: what you give and what you get. Every test is an opportunity to show God and to grow in God.'\n\nFAITH rises. You have passed the TEST OF THE HEART.");
       g.water(4);
     } else if (d === 0) {
       g.water(4); g.trust(-3);
       await g.page("You get your water. So does everyone who can shove. Behind you an old man is carried away from the pool, not having reached it.\n\n'You will always know whether you're looking at a community of Shalom or a community of Empire based on where you find the weak and the marginalized.'");
     } else {
       g.water(8); g.trust(-8); g.flag("hoarder");
-      await g.page("You fill eight skins and lead your donkeys away while the line is still forming. A woman curses you. You have plenty of water — and the elders have noticed your name.\n\nEMUNAH falls. Egypt, it seems, came with you.");
+      await g.page("You fill eight skins and lead your donkeys away while the line is still forming. A woman curses you. You have plenty of water — and the elders have noticed your name.\n\nFAITH falls. Egypt, it seems, came with you.");
     }
     await g.insight("BEMA 20 · the test of the heart",
-      "'God doesn't test you just to see if you're going to pass. He tests you because He wants to live life together with you.' The word is YADA — to know by experience. 'You get to give Him receipts.'\n\nThe first of three tests on the road to Sinai — heart, soul, and 'very' — maps onto the Shema: love the LORD with all your LEV, your NEPHESH, your MEOD.");
+      "'God doesn't test you just to see if you're going to pass. He tests you because He wants to live life together with you.' The word is YADA — to know by experience. 'You get to give Him receipts.'\n\nThe first of three tests on the road to Sinai — heart, soul, and strength — maps onto the Shema: love the LORD with all your LEV (heart), your NEPHESH (soul), your MEOD (strength — literally your 'very,' your 'much').");
     await g.insight("BibleProject · 'Israel Tests Yahweh'",
       "'Three days' in the Bible almost always signals a test and a confrontation with death. Here Israel is back at a tree: a piece of wood makes deadly water into life, and Moses is holding a staff that was once a snake. Every symbol of Genesis 3 is being reversed.");
   }
@@ -124,7 +124,7 @@ SINAI.STOPS.push({
     ]);
     if (c === 0) { const n = g.grumble("the Wilderness of Sin"); await g.page("The LORD hears. Interestingly, He does not answer with fire. He answers, 'I will rain bread from heaven for you' (Ex 16:4).\n\nGRUMBLES: " + n + " of 10."); }
     else if (c === 1) { g.flock(-6); g.food(60); g.trust(-2); await g.page("Six animals. Your family eats meat for two days and the smell draws neighbors you must turn away. The flock is smaller for the offerings to come."); }
-    else { g.trust(5); await g.page("You wait. EMUNAH rises."); }
+    else { g.trust(5); await g.page("You wait. FAITH rises."); }
     await g.page("That evening quail come up and cover the camp. In the morning, when the dew lifts, the desert floor is covered with thin flakes like frost.\n\n'MAN HU?' the people say — 'What is it?' — and the name sticks: MANNA. 'It was white like coriander seed and tasted like wafers made with honey' (Ex 16:31).\n\nMoses: 'Gather as much as each person needs — an omer per person. No one is to keep any of it until morning.'\n\nAn omer is somewhere between a cup and a liter. Not a bushel. A cup.");
     g.S.manna = true;
     const d = await g.choose("You have never seen food fall from the sky. Tomorrow it may not. You gather:", [
@@ -147,7 +147,7 @@ SINAI.STOPS.push({
       "Go out at dawn 'just to check'"
     ]);
     if (e === 0) { g.trust(6); g.heal(5); await g.page("You rest. It is the first full day your household has not walked, dug, hauled or fled in a year. The bread from yesterday is fine.\n\n'The Sabbath is a sign between Me and you.' The rabbis call it the wedding ring."); }
-    else { g.trust(-6); g.flag("sabbath_broken"); await g.page("You find nothing but sand and a very long walk back in the heat. 'How long will you refuse?' EMUNAH falls."); }
+    else { g.trust(-6); g.flag("sabbath_broken"); await g.page("You find nothing but sand and a very long walk back in the heat. 'How long will you refuse?' FAITH falls."); }
     await g.insight("BibleProject · 'Israel Tests Yahweh'",
       "'For the third time in the Torah, rain falls. First the flood. Then fire on Sodom. Now the skies rain bread — but there's a test: will Israel trust that when they rest instead of gathering, Yahweh will have given them enough?'");
     await g.insight("Pawson · Unlocking the OT part 9",
@@ -168,7 +168,7 @@ SINAI.STOPS.push({
       "Say nothing and stand between the crowd and Moses"
     ]);
     if (c === 0) { const n = g.grumble("Rephidim (Massah)"); g.trust(-4); await g.page("The place gets two names for what you just did: MASSAH (testing) and MERIBAH (quarreling).\n\n'The issue is not that they asked for water. The issue is that they demanded it, as if Yahweh didn't intend to provide.'\n\nGRUMBLES: " + n + " of 10."); }
-    else if (c === 1) { g.trust(5); await g.page("Asking is not testing. Gideon asked for a fleece and was not counted a rebel. 'Help me in my unbelief' is not the same as 'unless you do X, I won't move.' EMUNAH rises."); }
+    else if (c === 1) { g.trust(5); await g.page("Asking is not testing. Gideon asked for a fleece and was not counted a rebel. 'Help me in my unbelief' is not the same as 'unless you do X, I won't move.' FAITH rises."); }
     else { g.trust(3); g.flag("shielded_moses"); await g.page("Moses sees you. The elders see you. Nothing comes of it today. Something may."); }
     await g.page("The LORD to Moses: 'Walk on ahead of the people. Take some elders. Take the staff. I will STAND THERE BEFORE YOU by the rock at Horeb. Strike the rock, and water will come out of it' (Ex 17:5-6).\n\nThe word for strike is NAKAH — to smite, to strike in order to kill. The same word used of the Egyptian beating the slave. And the LORD stands PANIYM — in front of the face of — the rock.\n\nMoses strikes. Water pours out of the mountain. The elders have just watched a God who steps in front of the blow.");
     g.water(20);
@@ -184,7 +184,7 @@ SINAI.STOPS.push({
     if (order === 0) {
       g.trust(8); g.flag("weak_in_middle"); g.log("Put the weak in the middle against Amalek");
       await g.page("Your strongest take the rear. The raiders hit the back of the column and find spears instead of the sick. Nobody in your household falls.\n\nLater, in Numbers, the LORD will assign the tribe of DAN to bring up the rear of the whole nation for exactly this reason.");
-      if (g.S.role === "dan") { g.trust(4); await g.page("You are of Dan. This is the job you will hold for forty years. EMUNAH rises."); }
+      if (g.S.role === "dan") { g.trust(4); await g.page("You are of Dan. This is the job you will hold for forty years. FAITH rises."); }
     } else {
       const who = g.kill("a raider's wound");
       g.trust(-6);
@@ -262,7 +262,7 @@ SINAI.STOPS.push({
       "Nothing. Gold is for emergencies"
     ] : ["Goat hair, acacia wood and your labor — it is all you have"]);
     if (gold === 0) { g.trust(6); await g.page("You spin goat hair for the outer tent and cut acacia in the wadi. The Tent is built by what you have, not what you had."); }
-    else if (give === 0) { g.S.gold = 0; g.trust(12); g.flag("gave_all"); g.log("Gave all your Egyptian gold to the Tent"); await g.page("You bring everything. So does everyone. The craftsmen come to Moses: 'The people are bringing MORE than enough.' Moses orders the camp to STOP giving (Ex 36:6-7).\n\n'They gave spontaneously, thoughtfully, regularly and generously — they had to be stopped.' About one ton of gold in all.\n\nYou keep the silver. EMUNAH rises greatly."); }
+    else if (give === 0) { g.S.gold = 0; g.trust(12); g.flag("gave_all"); g.log("Gave all your Egyptian gold to the Tent"); await g.page("You bring everything. So does everyone. The craftsmen come to Moses: 'The people are bringing MORE than enough.' Moses orders the camp to STOP giving (Ex 36:6-7).\n\n'They gave spontaneously, thoughtfully, regularly and generously — they had to be stopped.' About one ton of gold in all.\n\nYou keep the silver. FAITH rises greatly."); }
     else if (give === 1) { g.S.gold = Math.max(0, gold - Math.round(gold * 0.3)); g.trust(4); await g.page("A fair share. The Tent goes up. You still have gold on the donkey."); }
     else { g.trust(-8); g.flag("kept_gold"); g.log("Kept back your gold from the Tent"); await g.page("You keep it all. Nobody checks. The Tent goes up without you.\n\nGold you would not give to God has a way of finding another use. Remember this."); }
     await g.page("On the first day of the first month of the second year the Tent is finished. 'So Moses finished the work' — the words used of God at creation. The cloud covers the Tent of Meeting and the glory of the LORD fills it, and Moses CANNOT ENTER (Ex 40:34-35).\n\nA mobile Genesis 1-3 you carry through the desert. And an unresolved question: how can a holy God live with a rebellious people?");

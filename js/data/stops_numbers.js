@@ -268,7 +268,7 @@ SINAI.STOPS.push({
       "Choose life — SHEMA, listen, love, do",
       "Say the words with everyone else and think about the grazing across the river"
     ]);
-    if (c === 0) { g.trust(10); g.flag("chose_life"); g.log("Chose life on the plains of Moab"); await g.page("'Listen (SHEMA) appears 91 times in Deuteronomy. It means more than hear. It means respond.' Idols cannot listen. You can. EMUNAH rises."); }
+    if (c === 0) { g.trust(10); g.flag("chose_life"); g.log("Chose life on the plains of Moab"); await g.page("'Listen (SHEMA) appears 91 times in Deuteronomy. It means more than hear. It means respond.' Idols cannot listen. You can. FAITH rises."); }
     else { g.trust(-4); await g.page("The words are said. The grazing across the river is very good. Deuteronomy 31:29 was written about someone."); }
     await g.page("Moses sings a song (Deut 32) so long and so honest that God calls it a witness against them: 'You are going to fail. Here is how to make your way back.' He blesses the tribes, one by one. Then he climbs Nebo, alone.\n\nThe LORD shows him the whole land — Gilead to Dan, Naphtali, Ephraim and Manasseh, Judah to the sea, the Negev, the valley of Jericho, the city of palms. 'I have let you see it with your eyes, but you will not cross over.'\n\nAnd Moses dies there, 'by the mouth of the LORD' — the rabbis say, with a kiss. God buries him. No one knows where.", { title: "THE MOUNTAIN" });
     g.days(30); g.heal(6);

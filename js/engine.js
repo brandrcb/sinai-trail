@@ -120,7 +120,7 @@
         `<span>Date: ${Game.dateStr()}</span><span>Weather: ${S.weather}</span><span>Health: ${h}</span>` +
         `<span>Pace: ${S.pace === "cloud" ? "with the cloud" : S.pace === "ahead" ? "ahead of the cloud" : "lagging"}</span><span>Manna: ${S.manna ? SINAI.RATIONS[S.rations].name.split(",")[0].toLowerCase() : (S.visited.includes("jordan") ? "ended" : "none yet")}</span>` +
         `<span>Water: ${Math.max(0, Math.floor(Game.waterDays()))} days</span><span>Food: ${Math.max(0, Math.round(S.food))} lbs</span>` +
-        `<span>Emunah: ${Math.round(S.trust)}</span><span>Grumbles: ${S.grumbles}/10</span>`;
+        `<span>Faith: ${Math.round(S.trust)}</span><span>Grumbles: ${S.grumbles}/10</span>`;
     }
   };
 
@@ -129,6 +129,10 @@
     S: null,
     difficulty() { let d = 1; try { d = parseFloat(localStorage.getItem("sinai_diff") || "1") || 1; } catch (e) { } return d; },
     setDifficulty(d) { try { localStorage.setItem("sinai_diff", String(d)); } catch (e) { } if (this.S) this.S.diff = d; },
+    /* ---------- save / resume (localStorage; one slot per browser) ---------- */
+    save() { const S = this.S; if (!S) return; try { localStorage.setItem("sinai_save", JSON.stringify({ v: 1, when: Date.now(), S })); } catch (e) { } },
+    loadSave() { try { const j = JSON.parse(localStorage.getItem("sinai_save") || "null"); return j && j.S && j.S.party ? j : null; } catch (e) { return null; } },
+    clearSave() { try { localStorage.removeItem("sinai_save"); } catch (e) { } },
     diffName(d) { return d < 1 ? "FOLLOW THE CLOUD (gentle)" : d > 1 ? "TEN TIMES (hard)" : "TEST THE LORD (normal)"; },
     /* hidden hardship score H (0-139), Oregon-style: good / fair / poor / very poor */
     band(H) { return H < 35 ? "good" : H < 70 ? "fair" : H < 105 ? "poor" : "very poor"; },
@@ -217,7 +221,7 @@
       } else if (got > need + 0.5) {
         S.trust = Math.max(0, S.trust - 3); S.H = Math.min(139, S.H + 3); S.flags.hoarded = true; S.flags.manna_extra = (S.flags.manna_extra || 0) + 1;
         S.pendingMaggots = sixth ? null : true;
-        if (sixth) await UI.page(`${got.toFixed(2)} omers — more than two a head. The extra bakes into hard cakes that nobody wants, and a neighbour's family has less. EMUNAH slips.`, { title: "" });
+        if (sixth) await UI.page(`${got.toFixed(2)} omers — more than two a head. The extra bakes into hard cakes that nobody wants, and a neighbour's family has less. FAITH slips.`, { title: "" });
         else await UI.page(`${got.toFixed(2)} omers for ${n} people. More than an omer a head. You put the extra in a jar, just in case.`, { title: "" });
       } else {
         S.trust = Math.min(100, S.trust + 1); S.flags.manna_exact = (S.flags.manna_exact || 0) + 1;
@@ -353,13 +357,17 @@
       this.S = null; UI.status(null); UI.title(""); UI.setScene("title");
       UI.startAnim();
       while (true) {
-        const c = await UI.choose("THE EXODUS TRAIL\n\nYou may:", [
-          "Travel the trail", "Learn about the trail", "See the Stones of Witness (top ten)",
+        const sv = this.loadSave(), o = sv ? 1 : 0;
+        const resumeLabel = sv ? `Continue your journey — ${sv.S.party[0].name}, ${sv.S.d} ${SINAI.MONTHS[sv.S.m - 1]}, year ${sv.S.y}, ${sv.S.miles > 0 ? "on the road to " : "at "}${SINAI.STOPS[sv.S.stopIdx].name}` : null;
+        const c0 = await UI.choose("THE EXODUS TRAIL\n\nYou may:", (sv ? [resumeLabel] : []).concat([
+          "Travel the trail" + (sv ? " (start over)" : ""), "Learn about the trail", "See the Stones of Witness (top ten)",
           "Graphics: " + (UI.look === "deluxe" ? "DELUXE (1990 colour)  →  switch to Classic" : "CLASSIC (1985 green screen)  →  switch to Deluxe"),
           "Difficulty: " + this.diffName(this.difficulty()),
           "Turn sound " + (SINAI.Audio.on ? "off" : "on"), "About this game"
-        ], { title: "" });
-        if (c === 0) return;
+        ]), { title: "" });
+        if (sv && c0 === 0) return sv;
+        const c = c0 - o;
+        if (c === 0) { if (sv) { const k = await UI.choose("Start over? The saved journey will be lost.", ["Yes — a new household", "No — go back"]); if (k === 1) continue; this.clearSave(); } return null; }
         if (c === 1) for (const [t, b] of SINAI.LEARN) await UI.page(b, { title: t, scene: "scroll" });
         if (c === 2) await this.topTen();
         if (c === 3) UI.setLook(UI.look === "deluxe" ? "classic" : "deluxe");
@@ -406,10 +414,10 @@
     },
 
     /* ---------- main travel loop ---------- */
-    async play() {
+    async play(resume) {
       const S = this.S;
-      // stop 0 runs immediately
-      await this.arrive();
+      // stop 0 runs immediately; on resume, a stop that was interrupted is re-run from its start
+      if (!resume) await this.arrive();
       while (true) {
         const next = SINAI.STOPS[S.stopIdx];
         if (S.miles <= 0) { await this.arrive(); if (this.over) return; continue; }
@@ -424,7 +432,7 @@
           $("menu").innerHTML = "";
           UI.interrupt = false;
           if (S.manna) {
-            if (S.pendingMaggots) { S.pendingMaggots = null; UI.stopAnim(); await UI.page("Morning. The jar from yesterday is full of maggots and the tent stinks. 'Moses was angry with them' (Ex 16:20).\n\nEMUNAH leaks. You gather again.", { title: "", scene: "camp" }); UI.setScene("travel"); UI.startAnim(); }
+            if (S.pendingMaggots) { S.pendingMaggots = null; UI.stopAnim(); await UI.page("Morning. The jar from yesterday is full of maggots and the tent stinks. 'Moses was angry with them' (Ex 16:20).\n\nFAITH leaks. You gather again.", { title: "", scene: "camp" }); UI.setScene("travel"); UI.startAnim(); }
             if (S.dow === 5 || !S.flags.manna_first || (rnd() < 0.15 && !UI.fast)) { S.flags.manna_first = true; UI.fast = false; await this.mannaMorning(S.dow === 5); }
             else if (S.dow === 5) { /* unreachable */ }
           }
@@ -446,11 +454,12 @@
             await sleep(50);
           }
           if (await this.checkDeaths()) { await this.gameOver(); return; }
+          this.save();
           if (UI.interrupt) { UI.interrupt = false; paused = true; break; }
-          if (rnd() < 0.2 && S.miles > 0) { UI.fast = false; await this.randomEvent(); if (await this.checkDeaths()) { await this.gameOver(); return; } UI.setScene("travel"); UI.title(""); }
+          if (rnd() < 0.2 && S.miles > 0) { UI.fast = false; await this.randomEvent(); if (await this.checkDeaths()) { await this.gameOver(); return; } UI.setScene("travel"); UI.title(""); this.save(); }
         }
         UI.fast = false;
-        if (paused) { UI.stopAnim(); await this.situation(); }
+        if (paused) { UI.stopAnim(); await this.situation(); this.save(); }
       }
     },
 
@@ -497,10 +506,10 @@
           "Continue on the trail", "Check supplies", "Look at the map", "Change pace", "Change manna-gathering", "Stop to rest", "See your household", "Read the trail log"
         ], { scene: "travel", title: "" });
         if (c === 0) return;
-        if (c === 1) await UI.page(`Health of the household: ${this.band(S.H)}\nWater: ${Math.floor(this.waterDays())} days for ${this.count()} people\nProvisions: ${Math.round(S.food)} lbs${S.manna ? " (manna falls daily)" : ""}\nFlock: ${S.flock} head\nDonkeys: ${S.donkeys}\nSpare skins: ${S.skins}\nSandals: ${S.sandals} pairs\nSilver: ${S.silver} shekels\nEgyptian gold: ${S.gold} shekels' weight\nEmunah (trust): ${Math.round(S.trust)}\nGrumbles counted: ${S.grumbles} of 10`, { title: "SUPPLIES" });
+        if (c === 1) await UI.page(`Health of the household: ${this.band(S.H)}\nWater: ${Math.floor(this.waterDays())} days for ${this.count()} people\nProvisions: ${Math.round(S.food)} lbs${S.manna ? " (manna falls daily)" : ""}\nFlock: ${S.flock} head\nDonkeys: ${S.donkeys}\nSpare skins: ${S.skins}\nSandals: ${S.sandals} pairs\nSilver: ${S.silver} shekels\nEgyptian gold: ${S.gold} shekels' weight\nFaith (trust): ${Math.round(S.trust)}\nGrumbles counted: ${S.grumbles} of 10`, { title: "SUPPLIES" });
         if (c === 2) { SINAI.Map.show(S); await new Promise(r => { const t = setInterval(() => { if (!SINAI.Map.visible) { clearInterval(t); r(); } }, 100); }); }
         if (c === 3) { const keys = Object.keys(SINAI.PACES).filter(k => !(S.role === "levi" && k === "ahead")); const p = await UI.choose(S.role === "levi" ? "The pace (a Levite carrying the holy things cannot run ahead of the cloud):" : "The pace:", keys.map(k => SINAI.PACES[k].name + " — " + SINAI.PACES[k].desc)); S.pace = keys[p]; }
-        if (c === 4) { if (!S.manna) await UI.page("There is no manna yet. You eat what you carry."); else { const r = await UI.choose("Gathering manna:", Object.values(SINAI.RATIONS).map(r => r.name + " — " + r.desc)); S.rations = Object.keys(SINAI.RATIONS)[r]; if (S.rations === "double") { S.flags.hoarded = true; await UI.page("In the morning the extra is full of maggots. Every morning. EMUNAH will leak away while you hoard."); } } }
+        if (c === 4) { if (!S.manna) await UI.page("There is no manna yet. You eat what you carry."); else { const r = await UI.choose("Gathering manna:", Object.values(SINAI.RATIONS).map(r => r.name + " — " + r.desc)); S.rations = Object.keys(SINAI.RATIONS)[r]; if (S.rations === "double") { S.flags.hoarded = true; await UI.page("In the morning the extra is full of maggots. Every morning. FAITH will leak away while you hoard."); } } }
         if (c === 5) { const aw = this.atWater(); const d = await UI.choose(aw ? "You are camped beside water. Rest costs nothing here and heals well. Rest how long?" : `You are in the open. Every day of rest drinks a day of water (${this.count()} skins) and heals slowly. Water left: ${Math.floor(this.waterDays())} days. Rest how long?`, ["1 day", "3 days", "7 days", "No — keep moving"]); if (d < 3) { const n = [1, 3, 7][d]; for (let i = 0; i < n; i++) this.tick(false); await UI.page(`You rest ${n} day(s). Health of the household: ${this.band(S.H)}.`); if (await this.checkDeaths()) { await this.gameOver(); return; } } }
         if (c === 6) await UI.page(S.party.map(p => `${p.name}, ${p.age}: ${p.alive ? (p.hp > 75 ? "good" : p.hp > 50 ? "fair" : p.hp > 25 ? "poor" : "very poor") + (p.ill ? " — " + p.ill : "") : "dead (" + p.cause + ")"}`).join("\n"), { title: "HOUSEHOLD" });
         if (c === 7) await UI.page(S.log.length ? S.log.map((l, i) => `${i + 1}. ${l}`).join("\n") : "Nothing yet.", { title: "TRAIL LOG" });
@@ -522,7 +531,8 @@
     async arrive() {
       const S = this.S; const stop = SINAI.STOPS[S.stopIdx];
       UI.stopAnim(); this.curScene = stop.scene; UI.setScene(stop.scene); UI.startAnim();
-      S.visited.push(stop.id); S.miles = 0;
+      S.miles = 0; this.save();
+      S.visited.push(stop.id);
       if (stop.date) { S.y = stop.date[0]; S.m = stop.date[1]; S.d = stop.date[2]; }
       if (S.stopIdx > 0) await UI.page(`You have reached ${stop.name.toUpperCase()}.\n${stop.book}\n\n${this.dateStr()}`, { title: stop.name.toUpperCase() });
       if (stop.water === "spring") S.water = this.waterCap(); else if (stop.water === "well") S.water = Math.min(this.waterCap(), S.water + 5 * this.count());
@@ -531,7 +541,7 @@
       if (await this.checkDeaths()) { await this.gameOver(); this.over = true; return; }
       if (S.flags.dead_leader) { await this.ending(); this.over = true; return; }
       if (stop.final) { await this.ending(); this.over = true; return; }
-      S.stopIdx++; S.miles = SINAI.STOPS[S.stopIdx].miles;
+      S.stopIdx++; S.miles = SINAI.STOPS[S.stopIdx].miles; this.save();
       await UI.page(`The cloud lifts. The next stop: ${SINAI.STOPS[S.stopIdx].name}, about ${SINAI.STOPS[S.stopIdx].miles} miles.`, { title: "" });
     },
 
@@ -548,7 +558,7 @@
       return Math.round(Math.max(0, s) * S.mult * (S.diff > 1 ? 1.5 : S.diff < 1 ? 0.75 : 1));
     },
     async ending() {
-      const S = this.S; UI.stopAnim();
+      const S = this.S; UI.stopAnim(); this.clearSave();
       const alive = S.party.filter(p => p.alive);
       const sc = this.score();
       if (S.flags.dead_leader) {
@@ -556,14 +566,14 @@
         await UI.page(`Here lies ${S.party[0].name}, ${SINAI.EPITAPHS["the devoted things"]}.\n\nThe Valley of Achor — 'trouble' — is named for what happened here. Your household enters the land without you.\n\nScore: ${sc} stones of witness.`, { title: "THE VALLEY OF ACHOR" });
       } else {
         UI.setScene("promised");
-        await UI.page(`YOU HAVE ENTERED THE LAND.\n\n${alive.length} of your household stand in the land the LORD swore to Abraham, Isaac and Jacob.\n\n${alive.map(p => "  " + p.name + ", " + p.age).join("\n")}\n\nDead on the trail: ${S.deaths.length}.\nGrumbles counted: ${S.grumbles}.\nEmunah: ${Math.round(S.trust)}.\nFlock: ${S.flock}. Silver: ${S.silver}.`, { title: "THE LAND" });
+        await UI.page(`YOU HAVE ENTERED THE LAND.\n\n${alive.length} of your household stand in the land the LORD swore to Abraham, Isaac and Jacob.\n\n${alive.map(p => "  " + p.name + ", " + p.age).join("\n")}\n\nDead on the trail: ${S.deaths.length}.\nGrumbles counted: ${S.grumbles}.\nFaith: ${Math.round(S.trust)}.\nFlock: ${S.flock}. Silver: ${S.silver}.`, { title: "THE LAND" });
         await UI.page(`STONES OF WITNESS\n\n${S.log.length ? S.log.map(l => "  • " + l).join("\n") : "  (none recorded)"}\n\n'A standing stone doesn't do anything if there's nobody there to tell the story.'\n\nSCORE: ${sc}  (x${S.mult} for ${SINAI.ROLES.find(r => r.id === S.role).name})`, { title: "" });
         await UI.page("'Now fear the LORD and serve Him with all faithfulness. Throw away the gods your ancestors worshiped beyond the Euphrates and in Egypt... But as for me and my household, we will serve the LORD.' (Joshua 24:14-15)\n\nThe land is not a fortress. It is a crossroads. Go and be a blessing.", { title: "" });
       }
       await this.recordScore(sc);
     },
     async gameOver() {
-      const S = this.S; UI.stopAnim(); UI.setScene("grave");
+      const S = this.S; UI.stopAnim(); UI.setScene("grave"); this.clearSave();
       const dead = S.party[0].alive ? S.party.filter(p => !p.alive).slice(-1)[0] : S.party[0];
       const ep = SINAI.EPITAPHS[dead.cause] || "who died in the wilderness";
       const who = S.party[0].alive ? "Your whole household is gone." : "";
@@ -589,10 +599,16 @@
       UI.init(); SINAI.Map.init();
       while (true) {
         this.over = false;
-        await this.titleScreen();
+        const sv = await this.titleScreen();
         SINAI.Audio.start();
-        await this.setup();
-        await this.play();
+        if (sv) {
+          this.S = sv.S; this.S.pendingDeath = null; this.S.illToday = null;
+          UI.status(this.S);
+          await this.play(true);
+        } else {
+          await this.setup();
+          await this.play();
+        }
         UI.stopAnim();
       }
     }
