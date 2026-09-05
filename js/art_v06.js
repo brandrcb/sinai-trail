@@ -283,7 +283,7 @@
   function heroGroupFor(St, tSec, x0, y, o) {
     o = o || {}; const f = [0, 1, 0, 2][Math.floor(tSec * 6) % 4];
     const party = St && St.party ? St.party.filter(p => p.alive) : null;
-    if (!party) return heroGroup("A", f, x0, y, o);
+    if (!party) return heroGroup("B", f, x0, y, o);
     const adults = party.filter(p => p.age >= 18 && p.age < 55), elders = party.filter(p => p.age >= 55), kids = party.filter(p => p.age < 18);
     const donkeys = St.donkeys || 0, sheep = Math.min(7, Math.ceil((St.flock || 0) / 4));
     let x = x0;
@@ -299,7 +299,9 @@
     let dk = 0;
     kids.forEach((k, i) => { if (dk < donkeys) { const d = donkeyHero((f + i) % 3, { blanket: true, i: 4 + i }); d.draw(ctx, x, y - d.h + (i % 2), P); kidRider(4 + i).draw(ctx, x + 10, y - d.h - 6 + (i % 2), P); x -= 23; dk++; } else { place(kidHero(4 + i, (f + i) % 3), 2, 0); x -= 13; } });
     elders.forEach((e, i) => { place(personHero("elder", 2 + i, (f + 2 + i) % 3), 6, 0); x -= 16; });
-    if (donkeys > dk) { const pk = donkeyHero((f + 1) % 3, { pack: true }); pk.draw(ctx, x - 2, y - pk.h + 1, P); x -= 28; } // one pack donkey stands for the rest
+    // OPTION B: the possessions ride in the ox-drawn covered cart (Num 7:3); spare donkeys carry packs behind it
+    const cart = oxCartHero(f); cart.draw(ctx, x - cart.w + 2, y - cart.h + 1, P); x -= cart.w + 2;
+    if (donkeys > dk && x > 40) { const pk = donkeyHero((f + 1) % 3, { pack: true }); pk.draw(ctx, x - 2, y - pk.h + 1, P); x -= 28; }
     const ns = o.sheep === undefined ? Math.min(sheep, Math.max(0, Math.floor((x + 4) / 11))) : o.sheep; // only as many as fit in the frame
     for (let i = 0; i < ns; i++) { const s = sheepHero(f + i); s.draw(ctx, x + 2 - i * 11, y - s.h + (i % 2), P); }
     if (o.dust !== false) for (let i = 0; i < 12; i++) { const dx = x0 + 60 - ((T * 25 + i * 21) % 200), dy = y - hash(i, Math.floor(T * 3)) * 3; ctx.save(); ctx.globalAlpha = 0.35; px(dx, dy, "#e9d8b0"); ctx.restore(); }
