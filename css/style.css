@@ -2,6 +2,7 @@
 :root { --g: #33ff33; --dg: #1a7a1a; --k: #000; --w: #fff; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: #0a0a0a; color: var(--g); font-family: 'VT323', 'Courier New', monospace; }
+body { min-height: 100vh; }
 #monitor { max-width: 900px; margin: 12px auto; padding: 0 8px; }
 #bezel { position: relative; background: var(--k); border: 6px solid #2a2a2a; border-radius: 14px; box-shadow: 0 0 0 3px #111, 0 0 40px rgba(51,255,51,.12) inset, 0 8px 30px rgba(0,0,0,.8); padding: 10px 14px 12px; overflow: hidden; }
 #topbar { display: flex; justify-content: space-between; align-items: center; font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--dg); margin-bottom: 8px; }
@@ -41,6 +42,7 @@ body.deluxe #party { border-top: 2px solid #b58a4a; }
 
 /* ===================== DELUXE LOOK (1990 colour edition) ===================== */
 body.deluxe { background: #1b1a24; color: #2b1d0e; }
+html:has(body.deluxe) { background: #1b1a24; }
 body.deluxe #bezel { background: #e9dcb9; border: 6px solid #5a3e28; border-radius: 6px; box-shadow: 0 0 0 3px #2c1c10, 0 0 0 5px #b58a4a, 0 10px 34px rgba(0,0,0,.7); }
 body.deluxe #topbar { color: #7a4a22; }
 body.deluxe #btns button { background: #f4ead0; color: #5a2a12; border: 2px solid #8a5a32; box-shadow: inset -2px -2px 0 #c9a76a, inset 2px 2px 0 #fff8e8; }
