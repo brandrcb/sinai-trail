@@ -70,16 +70,21 @@
       this.options = options;
       return new Promise(res => { this.pending = res; });
     },
-    async input(prompt, def) {
+    BACK: { back: true },
+    async input(prompt, def, opts) {
+      opts = opts || {};
       this.text(prompt);
-      $("menu").innerHTML = `<li class="inp"><input id="inp" maxlength="14" value="${def || ""}"> <button type="button" id="inpok">ENTER</button></li>`;
+      const backBtn = opts.back ? ` <button type="button" id="inpback">BACK</button>` : "";
+      $("menu").innerHTML = `<li class="inp"><input id="inp" maxlength="14" value="${def || ""}"> <button type="button" id="inpok">ENTER</button>${backBtn}</li>`;
       const inp = $("inp"); inp.focus(); inp.select();
       this.textInput = true;
       return new Promise(res => {
         let done = false;
-        const commit = () => { if (done) return; done = true; this.textInput = false; const v = inp.value.trim() || def; $("menu").innerHTML = ""; res(v); };
+        const finish = v => { if (done) return; done = true; this.textInput = false; $("menu").innerHTML = ""; res(v); };
+        const commit = () => finish(inp.value.trim() || def);
         inp.addEventListener("keydown", e => { if (e.key === "Enter") commit(); });
         $("inpok").addEventListener("click", e => { e.stopPropagation(); commit(); });
+        if (opts.back) $("inpback").addEventListener("click", e => { e.stopPropagation(); finish(UI.BACK); });
       });
     },
     status(S) {
@@ -265,17 +270,25 @@
     async store() {
       const S = this.S; UI.setScene("store");
       await UI.page("DIVIDING THE SPOILS OF EGYPT\n\nThe Egyptians 'gave them what they asked for; so they plundered the Egyptians' (Ex 12:36). On the shore the elders are sorting silver, gold, cloth and animals among the households, and the mixed multitude are trading.\n\nYou have " + S.silver + " shekels of silver to spend. Your gold (" + S.gold + " shekels' weight of jewelry) is kept back. You will need water most, donkeys second.", { title: "THE SPOILS" });
-      for (const item of SINAI.STORE) {
+      const snap = () => ({ silver: S.silver, donkeys: S.donkeys, flock: S.flock, food: S.food, water: S.water, skins: S.skins, sandals: S.sandals, sandalsBought: S.sandalsBought });
+      const snaps = [], chosen = [];
+      for (let i = 0; i < SINAI.STORE.length;) {
+        const item = SINAI.STORE[i];
+        snaps[i] = snap();
+        let goBack = false;
         while (true) {
-          const q = await UI.input(`${item.name}  —  ${item.price} shekels per ${item.unit}.\n${item.help}\n\nSilver left: ${S.silver} shekels (enough for ${Math.min(item.max, Math.floor(S.silver / item.price))} ${item.unit}).  How many ${item.unit}?`, String(item.min));
+          const q = await UI.input(`${item.name}  —  ${item.price} shekels per ${item.unit}.\n${item.help}\n\nSilver left: ${S.silver} shekels (enough for ${Math.min(item.max, Math.floor(S.silver / item.price))} ${item.unit}).  How many ${item.unit}?`, chosen[i] === undefined ? String(item.min) : String(chosen[i]), { back: i > 0 });
+          if (q === UI.BACK) { goBack = true; break; }
           const n = Math.max(0, parseInt(q, 10) || 0);
           if (n < item.min) { await UI.page(`You need at least ${item.min} ${item.unit}.`); continue; }
           if (n > item.max) { await UI.page(`The elders will not allot more than ${item.max} ${item.unit} to one household.`); continue; }
           if (n * item.price > S.silver) { await UI.page("You do not have enough silver for that."); continue; }
           S.silver -= n * item.price;
           if (item.id === "sandals") { S.sandals = n; S.sandalsBought = n; } else S[item.id] = (S[item.id] || 0) + n;
+          chosen[i] = n;
           break;
         }
+        if (goBack) { i--; Object.assign(S, snaps[i]); } else { i++; }
         UI.status(S);
       }
       S.silver = Math.round(S.silver);
