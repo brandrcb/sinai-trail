@@ -72,11 +72,14 @@
     },
     async input(prompt, def) {
       this.text(prompt);
-      $("menu").innerHTML = `<li class="inp"><input id="inp" maxlength="14" value="${def || ""}"> <span class="k">(ENTER)</span></li>`;
+      $("menu").innerHTML = `<li class="inp"><input id="inp" maxlength="14" value="${def || ""}"> <button type="button" id="inpok">ENTER</button></li>`;
       const inp = $("inp"); inp.focus(); inp.select();
       this.textInput = true;
       return new Promise(res => {
-        inp.addEventListener("keydown", e => { if (e.key === "Enter") { this.textInput = false; const v = inp.value.trim() || def; $("menu").innerHTML = ""; res(v); } });
+        let done = false;
+        const commit = () => { if (done) return; done = true; this.textInput = false; const v = inp.value.trim() || def; $("menu").innerHTML = ""; res(v); };
+        inp.addEventListener("keydown", e => { if (e.key === "Enter") commit(); });
+        $("inpok").addEventListener("click", e => { e.stopPropagation(); commit(); });
       });
     },
     status(S) {

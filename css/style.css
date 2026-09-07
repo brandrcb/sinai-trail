@@ -17,6 +17,11 @@ body { min-height: 100vh; }
 #menu li.cont { color: var(--dg); animation: blink 1.4s steps(2) infinite; }
 #menu li.inp input { background: var(--k); color: var(--g); border: none; border-bottom: 2px solid var(--g); font-family: inherit; font-size: 22px; width: 260px; outline: none; }
 #menu .k { color: var(--w); }
+#menu li.inp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#inpok { background: var(--k); color: var(--g); border: 2px solid var(--g); font-family: 'Press Start 2P', monospace; font-size: 10px; line-height: 1; padding: 12px 16px; min-height: 44px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#inpok:hover { background: var(--g); color: var(--k); }
+#inpok:active { transform: translateY(1px); }
+#inpok:focus-visible { outline: 2px solid var(--w); outline-offset: 2px; }
 #party { display: block; width: 100%; max-width: 560px; height: auto; image-rendering: pixelated; margin-top: 8px; border-top: 1px dashed var(--dg); padding-top: 6px; }
 #party[hidden] { display: none; }
 body.deluxe #party { border-top: 2px solid #b58a4a; }
@@ -55,6 +60,8 @@ body.deluxe #menu li:hover { background: #d9b877; border-left-color: #8a2a12; }
 body.deluxe #menu li.cont { color: #7a4a22; }
 body.deluxe #menu .k { color: #8a2a12; }
 body.deluxe #menu li.inp input { background: #fff8e8; color: #2b1d0e; border-bottom: 2px solid #8a5a32; }
+body.deluxe #inpok { background: #f4ead0; color: #5a2a12; border: 2px solid #8a5a32; box-shadow: inset -2px -2px 0 #c9a76a, inset 2px 2px 0 #fff8e8; }
+body.deluxe #inpok:hover { background: #d9b877; color: #2b1d0e; }
 body.deluxe #status { border-top: 2px solid #b58a4a; color: #5a3e28; }
 body.deluxe #scanlines { background: none; }
 body.deluxe #map { background: rgba(20,14,8,.94); }
